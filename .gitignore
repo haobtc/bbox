@@ -15,8 +15,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/
@@ -99,3 +97,4 @@ ENV/
 
 # mypy
 .mypy_cache/
+.localenv
