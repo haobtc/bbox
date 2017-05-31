@@ -1,6 +1,12 @@
+import re
+import asyncio
+import json
+from aiohttp import web
+
 from functools import wraps
 
 srv_dict = {}
+DEBUG = True
 
 class Service(object):
     def __init__(self, srv_name):
@@ -15,3 +21,103 @@ class Service(object):
             return __w
         return decorator
 
+class TupError(Exception):
+    def __init__(self, code, msg=None):
+        self.code = code
+        super(TupError, self).__init__(msg or code)
+
+class Request:
+    def __init__(self, body):
+        self.body = body
+        self.req_id = None
+        self.params = None
+        self.srv = None
+        
+    async def handle(self):
+        try:
+            self.req_id = self.body.get('id')
+            if (not isinstance(self.req_id, str) or
+                self.req_id is None):
+                raise TupError('invalpid reqid',
+                                   '{}'.format(self.req_id))
+            
+            self.params = self.body.get('params', [])
+
+            method = self.body['method']
+            if not isinstance(method, str):
+                raise TupError('invalid method',
+                               'method should be string')
+            
+            m = re.match(r'(\w+)\.(\w+)$', method)
+            if not m:
+                raise TupError('invalid method',
+                               'Method should be ID.ID')
+
+            srv_name = m.group(1)
+            self.method = m.group(2)
+            self.srv = srv_dict.get(srv_name)
+            if not self.srv:
+                raise TupError(
+                    'service not found',
+                    'server {} not found'.format(srv_name))
+            
+            fn = self.srv.methods[self.method]
+            res = await fn(self, *self.params)
+            resp = {'result': res,
+                    'id': self.req_id,
+                    'error': None}
+        except TupError as e:
+            error_info = {
+                'message': getattr(e, 'message', str(e)),
+                'code': e.code
+            }
+            resp = {'error': error_info,
+                    'id': self.req_id,
+                    'result': None}
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            error_info = {
+                'message': getattr(e, 'message', str(e)),
+                }
+            code = getattr(e, 'code', None)
+            if code:
+                error_info['code'] = code
+            if DEBUG:
+                error_info['stack'] = traceback.format_exc()
+            resp = {'error': error_info,
+                    'id': self.req_id,
+                    'result': None}
+        return resp
+
+    async def handle_ws(self, ws):
+        resp = await self.handle()
+        ws.send_str(json.dumps(resp))
+        return resp
+        
+async def handle(request):
+    body = await request.json()
+    req = Request(body)
+    resp = await req.handle()
+    return web.json_response(resp)
+
+async def handle_ws(request):
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+    
+    async for req_msg in ws:
+        body = json.loads(req_msg.data)
+        req = Request(body)
+        asyncio.ensure_future(req.handle_ws(ws))
+
+async def index(request):
+    return web.Response(text='hello')
+
+def webapp():
+    app = web.Application()
+    app.router.add_post('/jsonrpc/2.0/api', handle)
+    app.router.add_route('*', '/jsonrpc/2.0/ws', handle_ws)
+    app.router.add_get('/', index)
+    web.run_app(app)
+    
+    

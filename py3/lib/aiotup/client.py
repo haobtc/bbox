@@ -60,9 +60,23 @@ class WebSocketClient:
         await self.ws.send(json.dumps(payload))
         return await channel.get()
 
+    async def onclosed(self):
+        for req_id, channel in self.waiters.items():
+            data = {'id': req_id,
+                    'error': {'code': 'closed',
+                              'message': 'connection closed'},
+                    'result': None}
+            await channel.put(data)
+        self.waiters = {}
+        self.ws = None
+        
     async def wait(self):
         while True:
-            data = await self.ws.recv()
+            try:
+                data = await self.ws.recv()
+            except websockets.exceptions.ConnectionClosed:
+                return await self.onclosed()
+
             data = json.loads(data)
             req_id = data.get('id')
             print('got data', data)
@@ -75,3 +89,5 @@ class WebSocketClient:
                     logging.warn('Cannot find channel by id ', req_id)
             else:
                 logging.debug('no reqid seems a notify', data)
+
+                

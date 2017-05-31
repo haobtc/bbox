@@ -9,7 +9,7 @@ async def main():
     client = WebSocketClient()
     await client.connect()
     r = await asyncio.gather(
-        client.request('calc', 'add2sleep', 5, 68, 3.5),
+        client.request('calc', 'add2sleep', 5, 68, 13.5),
         client.request('calc', 'add2sleep', 6, 11, 1.5))
     print(r)
 
