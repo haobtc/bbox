@@ -1,22 +1,29 @@
 import re
+import logging
+import os, json
 import asyncio
 import json
 from aiohttp import web
 
 from functools import wraps
 
-srv_dict = {}
 DEBUG = True
+
+srv_dict = {}
 
 class Service(object):
     def __init__(self, srv_name):
         self.srv_name = srv_name
         self.methods = {}
+        if srv_name in srv_dict:
+            logging.warn('srv {} already exist'.format(srv_name))
         srv_dict[srv_name] = self
 
     def method(self, name):
         def decorator(fn):
             __w = wraps(fn)(fn)
+            if name in self.methods:
+                logging.warn('method {} already exist'.format(name))
             self.methods[name] = __w
             return __w
         return decorator
@@ -113,11 +120,10 @@ async def handle_ws(request):
 async def index(request):
     return web.Response(text='hello')
 
-def webapp():
+def http_server(host='localhost', port=8080):
     app = web.Application()
     app.router.add_post('/jsonrpc/2.0/api', handle)
     app.router.add_route('*', '/jsonrpc/2.0/ws', handle_ws)
     app.router.add_get('/', index)
-    web.run_app(app)
-    
+    web.run_app(app, host=host, port=port)
     

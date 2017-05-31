@@ -99,3 +99,4 @@ ENV/
 .mypy_cache/
 .localenv
 default.etcd/
+tup.config.json

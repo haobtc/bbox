@@ -1,0 +1,7 @@
+{
+    "etcd": [
+        "localhost:2379"
+    ],
+    "language": "python3",
+    "name": "calc"
+}
