@@ -4,7 +4,7 @@ import os, json
 import asyncio
 import json
 from aiohttp import web
-
+import aiotup.discovery as dsc
 from functools import wraps
 
 DEBUG = True
@@ -120,10 +120,25 @@ async def handle_ws(request):
 async def index(request):
     return web.Response(text='hello')
 
-def http_server(host='localhost', port=8080):
+async def http_server(loop=None):
+    if loop is None:
+        loop = asyncio.get_event_loop()
+    agent = dsc.start()
+    await agent.pickup_bind()
+    srvs = srv_dict.keys()
+    await agent.add_services(srvs)
+    
     app = web.Application()
     app.router.add_post('/jsonrpc/2.0/api', handle)
     app.router.add_route('*', '/jsonrpc/2.0/ws', handle_ws)
     app.router.add_get('/', index)
-    web.run_app(app, host=host, port=port)
+
+    host, port = agent.bind.split(':')
+    print('got bind {}'.format(agent.bind))
+    #web.run_app(app, host=host, port=port)
+
+    handler = app.make_handler()
+    srv = await loop.create_server(handler, host, port)
+    print('srv', srv)
+    return srv, handler
     

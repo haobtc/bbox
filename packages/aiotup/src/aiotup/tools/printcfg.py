@@ -1,7 +1,7 @@
 import os, sys
 import json
 import argparse
-from aiotup.config import Config
+from aiotup import config
 
 parser = argparse.ArgumentParser(
     description='start tup python project')
@@ -13,9 +13,9 @@ parser.add_argument(
 
 def main():
     args = parser.parse_args()    
-    config = Config.parse()
+    config.parse_local()
     try:
-        print(config[args.key])
+        print(config.local[args.key])
     except KeyError:
         # Failed to find the key
         sys.exit(1)

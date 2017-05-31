@@ -8,7 +8,10 @@ setup(name='aiotup',
       packages=['aiotup'],
       package_dir={'aiotup': 'src/aiotup'},
       scripts=['bin/tup'],
-      install_requires=['aiohttp',
-                        'aiochannel',
-                        'websockets']
+      install_requires=[
+          'aiohttp',
+          'aiochannel',
+          'websockets',
+          'aio_etcd'
+      ]
 )

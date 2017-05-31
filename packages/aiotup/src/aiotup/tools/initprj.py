@@ -1,4 +1,5 @@
 import os, sys
+import uuid
 import json
 import argparse
 
@@ -13,6 +14,11 @@ parser.add_argument(
     type=str,
     default='python3',
     help='the language, default is python3')
+parser.add_argument(
+    '--prefix',
+    type=str,
+    default='',
+    help='cluster prefix, a cluster of boxes share the prefix')
 
 def main():
     args = parser.parse_args()
@@ -32,15 +38,18 @@ def main():
 
     if lang == 'python':
         lang = 'python3'
-        
+
     config_json = {
         'name': prjdir,
-        'etcd': ['localhost:2379'],
-        'language': lang
+        'etcd': ['127.0.0.1:2379'],
+        'prefix': args.prefix or uuid.uuid4().hex,
+        'language': lang,
+        'port_range': [30000, 40000],
+        'bind_ip': '127.0.0.1'
         }
     config_file = os.path.join(prjdir, 'tup.config.json')
     with open(config_file, 'w', encoding='utf-8') as f:
-        json.dump(config_json, f, indent=4, sort_keys=True)
+        json.dump(config_json, f, indent=2, sort_keys=True)
 
 if __name__ == '__main__':
     main()

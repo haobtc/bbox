@@ -57,14 +57,18 @@ class WebSocketClient:
 
         channel = Channel(1)        
         self.waiters[req_id] = channel
-        await self.ws.send(json.dumps(payload))
-        return await channel.get()
-
+        try:
+            await self.ws.send(json.dumps(payload))
+            return await channel.get()
+        finally:
+            channel.close()
+            
     async def onclosed(self):
         for req_id, channel in self.waiters.items():
             data = {'id': req_id,
-                    'error': {'code': 'closed',
-                              'message': 'connection closed'},
+                    'error': {
+                        'code': 'close',
+                        'message': 'connection closed by peer'},
                     'result': None}
             await channel.put(data)
         self.waiters = {}

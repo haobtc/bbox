@@ -1,7 +1,10 @@
 {
-    "etcd": [
-        "localhost:2379"
-    ],
-    "language": "python3",
-    "name": "calc"
+  "etcd": [
+    "127.0.0.1:2379"
+  ],
+  "prefix": "b3e8a56ead1a4bebb5c7ff607e27b1c8",
+  "bind_ip": "127.0.0.1",
+  "port_range": [30000, 40000],
+  "language": "python3",
+  "name": "calc"
 }
