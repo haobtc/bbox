@@ -1,2 +1,3 @@
-# haorpc
-haobtc's new rpc multi-lang, json-based framework
+# TUP
+
+New multi-lang, json-based RPC framework
