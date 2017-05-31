@@ -1,4 +1,4 @@
-from aiohaorpc.client import Client, WebSocketClient
+from aiotup.client import Client, WebSocketClient
 import asyncio
 
 async def added(r):

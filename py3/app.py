@@ -1,6 +1,6 @@
 import asyncio
 import json
-import aiohaorpc.server as haoserver
+import aiotup.server as haoserver
 from aiohttp import web
 from services import calc
 

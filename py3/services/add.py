@@ -1,4 +1,4 @@
-from aiohaorpc.server import Service
+from aiotup.server import Service
 
 srv = Service('calc')
 
