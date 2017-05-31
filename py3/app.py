@@ -21,7 +21,7 @@ class Request:
         except Exception as e:
             import traceback
             traceback.print_exc()
-            resp = {'error': str(e.message),
+            resp = {'error': str(e),
                     'id': self.req_id,
                     'result': None}
         return resp
