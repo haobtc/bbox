@@ -152,4 +152,3 @@ async def http_server(loop=None):
     handler = app.make_handler()
     srv = await loop.create_server(handler, host, port)
     return srv, handler
-    

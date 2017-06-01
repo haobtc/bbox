@@ -5,6 +5,7 @@ import asyncio
 import argparse
 import aiotup.client as tup_client
 import aiotup.config as tup_config
+import aiotup.discovery as tup_dsc
 
 parser = argparse.ArgumentParser(
     description='test an rpc interface')
@@ -38,6 +39,12 @@ parser.add_argument(
     default=1.0,
     help='time interval between times')
 
+parser.add_argument(
+    '--dispatch_policy',
+    type=str,
+    default='first',
+    help='dispatch request to clients')
+
 async def main():
     tup_config.parse_local()
     args = parser.parse_args()
@@ -56,8 +63,13 @@ async def main():
 
         ps.append(p)
 
+    if args.dispatch_policy == 'random':
+        tup_client.engine.policy = tup_client.engine.RANDOM
+
     try:
-        await tup_client.engine.connect()
+        await tup_dsc.client_connect(**tup_config.local)
+        asyncio.ensure_future(tup_dsc.client_agent.watch_boxes())
+        
         for i in range(args.ntimes):
             r = await tup_client.engine.request(
                 srv,
@@ -70,8 +82,9 @@ async def main():
                 break
             await asyncio.sleep(args.interval)
     finally:
-        if tup_client.engine:
-            tup_client.engine.close()
+        if tup_dsc.client_agent:
+            tup_dsc.client_agent.close()
+
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()

@@ -39,23 +39,35 @@ class WebSocketClient:
         self.url_prefix = url_prefix
         self.waiters = {}
         self.ws = None
+        self.notify_channel = None
+        self.cont = True
+        asyncio.ensure_future(self.connect_wait())
+
+    @property
+    def connected(self):
+        return not not self.ws
 
     def close(self):
-        print('close')
+        self.cont = False
         if self.ws:
             self.ws.close()
             self.ws = None
 
     async def connect(self):
         if self.ws:
-            print('already connected')
+            logging.debug('connect to %s already connected',
+                          self.url_prefix)
             return
+        
         url = self.url_prefix + '/jsonrpc/2.0/ws'
-        self.ws = await websockets.connect(url)
-        asyncio.ensure_future(self.wait())
+        try:
+            ws = await websockets.connect(url)
+            self.ws = ws
+        except OSError:
+            logging.warn('connect to %s failed', url)
 
     async def request(self, srv, method, *params):
-        if not self.ws:
+        if not self.connected:
             raise ConnectionError('websocket closed')
         
         url = urljoin(self.url_prefix,
@@ -73,24 +85,28 @@ class WebSocketClient:
         self.waiters[req_id] = channel
         try:
             await self.ws.send(json.dumps(payload))
-            return await channel.get()
+            r = await channel.get()
+            #del self.waiters[req_id]
+            return r
+        except ChannelClosed:
+            raise ConnectionError(
+                'websocket closed on sending req')
         finally:
             channel.close()
 
     async def onclosed(self):
+        self.ws = None        
         for req_id, channel in self.waiters.items():
             channel.close()
-            # data = {'id': req_id,
-            #         'error': {
-            #             'code': 'close',
-            #             'message': 'connection closed by peer'},
-            #         'result': None}
-            # await channel.put(data)
         self.waiters = {}
-        self.ws = None
 
-    async def wait(self):
-        while True:
+    async def connect_wait(self):
+        while self.cont:
+            if not self.ws:
+                await self.connect()
+            if not self.ws:
+                await asyncio.sleep(1.0)
+                continue
             try:
                 data = await self.ws.recv()
             except websockets.exceptions.ConnectionClosed:
@@ -101,7 +117,7 @@ class WebSocketClient:
             if req_id:
                 channel = self.waiters.get(req_id)
                 if channel:
-                    del self.waiters[req_id]                    
+                    del self.waiters[req_id]
                     await channel.put(data)
                 else:
                     logging.warn('Cannot find channel by id ', req_id)
@@ -133,90 +149,53 @@ class ServiceRef:
     def __getattr__(self, name):
         return MethodRef(name, self)
 
-class MasterStandbyEngine:
-    def __init__(self):
-        self.pool = {}
-
-    async def connect(self):
-        assert config.local
-        await dsc.client_connect(**config.local)
-
-    def close(self):
-        if dsc.client_agent:
-            dsc.client_agent.close()
-            dsc.client_agent = None
-        self.pool = {}
-
-    def __getattr__(self, name):
-        if name not in self.pool:
-            raise AttributeError
-        return ServiceRef(name, self)
-
-    async def request(self, srv, method, *params, conn_retry=0, retry=0):
-        agent = dsc.client_agent
-        assert agent
-        if srv in self.pool:
-            client = self.pool[srv]
-        else:
-            boxes = agent.route.get(srv)
-            if not boxes:
-                raise ConnectionError(
-                    'no available rpc server')
-
-            bad_boxes = []
-            boxes = random.sample(boxes, len(boxes))
-
-            # retry connect some times
-            for _ in range(conn_retry + 1):
-                if boxes:
-                    box = boxes.pop()
-                else:
-                    box = random.choice(bad_boxes)
-
-                logging.debug('got box %s for service %s', box, srv)
-                client = WebSocketClient('ws://' + box)
-                try:
-                    await client.connect()
-                    self.pool[srv] = client
-                    break
-                except OSError:
-                    logging.error('cannot connect to %s', box)
-                    bad_boxes.append(box)
-
-            if srv not in self.pool:
-                raise ConnectionError(
-                    'all connection for service {} failed'.format(srv))
-        try:
-            return await client.request(srv, method, *params)
-        except (ChannelClosed, ConnectionError):
-            logging.error('channel closed')
-            client.close()
-            if srv in self.pool:
-                del self.pool[srv]
-            if retry <= 0:
-                raise ConnectionError(
-                    'cannot retry connections')
-            
-        return await self.request(srv, method,
-                                  *params,
-                                  conn_retry=conn_retry,
-                                  retry=retry-1)
-
 class FullConnectEngine:
+    FIRST = 1
+    RANDOM = 2
     def __init__(self):
-        #self.pool = {}
-        self.connections = {}
-
-    async def connect(self):
-        assert config.local
-        await dsc.client_connect(**config.local)
-
-    def close(self):
-        if dsc.client_agent:
-            dsc.client_agent.close()
-            dsc.client_agent = None
         self.pool = {}
+        self.policy = self.FIRST
+        #self.policy = 'RANDOM'
 
+    async def ensure_clients(self, srv):
+        agent = dsc.client_agent
+        assert agent
+
+        boxes = agent.route[srv]
+        for box in boxes:
+            if box not in self.pool:
+                # add box to pool
+                client = WebSocketClient('ws://' + box)
+                self.pool[box] = client
+
+        for box, client in list(self.pool.items()):
+            if box not in agent.boxes:
+                logging.warning('remove box %s', box)
+                # remove box due to server done
+                client.close()
+                del self.pool[box]
+
+        for _ in range(30):
+            c = self.get_client(srv, policy=self.FIRST)
+            if c:
+                return
+            await asyncio.sleep(0.01)
+
+    def get_client(self, srv, policy=None):
+        policy = policy or self.policy
+        agent = dsc.client_agent
+        clients = []
+        for box in agent.route[srv]:
+            client = self.pool.get(box)
+            if client.connected:
+                if policy == self.FIRST:
+                    return client
+                else:
+                    assert policy == self.RANDOM
+                    clients.append(client)
+        if clients:
+            return random.choice(clients)
+        
     def __getattr__(self, name):
         if name not in self.pool:
             raise AttributeError
@@ -225,44 +204,16 @@ class FullConnectEngine:
     async def request(self, srv, method, *params, conn_retry=0, retry=0):
         agent = dsc.client_agent
         assert agent
-        if srv in self.pool:
-            client = self.pool[srv]
-        else:
-            boxes = agent.route.get(srv)
-            if not boxes:
-                raise ConnectionError(
-                    'no available rpc server')
+        await self.ensure_clients(srv)
+        client = self.get_client(srv)
+        if not client:
+            raise ConnectionError(
+                'no available rpc server')
 
-            bad_boxes = []
-            boxes = random.sample(boxes, len(boxes))
-
-            # retry connect some times
-            for _ in range(conn_retry + 1):
-                if boxes:
-                    box = boxes.pop()
-                else:
-                    box = random.choice(bad_boxes)
-
-                logging.debug('got box %s for service %s', box, srv)
-                client = WebSocketClient('ws://' + box)
-                try:
-                    await client.connect()
-                    self.pool[srv] = client
-                    break
-                except OSError:
-                    logging.error('cannot connect to %s', box)
-                    bad_boxes.append(box)
-
-            if srv not in self.pool:
-                raise ConnectionError(
-                    'all connection for service {} failed'.format(srv))
         try:
             return await client.request(srv, method, *params)
-        except (ChannelClosed, ConnectionError):
-            logging.error('channel closed')
-            client.close()
-            if srv in self.pool:
-                del self.pool[srv]
+        except ConnectionError:
+            assert not client.connected
             if retry <= 0:
                 raise ConnectionError(
                     'cannot retry connections')
@@ -272,4 +223,5 @@ class FullConnectEngine:
                                   conn_retry=conn_retry,
                                   retry=retry-1)
     
-engine = MasterStandbyEngine()
+#engine = MasterStandbyEngine()
+engine = FullConnectEngine()

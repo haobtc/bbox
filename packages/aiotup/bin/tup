@@ -1,22 +1,24 @@
 #!/bin/bash
 
+export PY3='python3 -B'
+
 function help() {
     echo 'tup - rpc framework'
     echo "usage: $0 <command> [options]"
     echo 'commands'
     echo ' init <dir>   - init a tup project'
     echo ' start modspec [modspec]  - start rpc server'
-    echo ' rpc srv method param [param]  - rpc request'
+    echo ' rpc srv::method param [param]  - rpc request'
 }
 
 case "$1" in
     init)
-        exec python3 -B -m aiotup.tools.initprj ${@:2}
+        exec $PY3 -m aiotup.tools.initprj ${@:2}
         ;;
     start)
-        lang=`python3 -m aiotup.tools.printcfg language`
-        if [ $lang == python3 ]; then
-            exec python3 -B -m aiotup.tools.startprj ${@:2}
+        lang=`$PY3 -m aiotup.tools.printcfg language`
+        if [ $lang == 'python3' ]; then
+            exec $PY3 -m aiotup.tools.startprj ${@:2}
         else
             # TODO: support nodejs
             echo language $lang not supported
@@ -24,7 +26,7 @@ case "$1" in
         fi
         ;;
     rpc)
-        exec python3 -B -m aiotup.tools.rpcclient ${@:2}
+        exec $PY3 -m aiotup.tools.rpcclient ${@:2}
         ;;
     *)
         help
