@@ -68,8 +68,6 @@ async def main():
 
     try:
         await tup_dsc.client_connect(**tup_config.local)
-        asyncio.ensure_future(tup_dsc.client_agent.watch_boxes())
-        
         for i in range(args.ntimes):
             r = await tup_client.engine.request(
                 srv,

@@ -74,7 +74,7 @@ class ServerAgent(EtcdClient):
     async def update(self):
         while True:
             if not self.client or not self.bind:
-                logging.warn('etcd client or bind are empty')
+                logging.debug('etcd client or bind are empty')
             else:
                 key = self.path('boxes/{}'.format(self.bind))
                 await self.client.refresh(key, ttl=BOX_TTL)
@@ -121,13 +121,14 @@ class ClientAgent(EtcdClient):
                 logging.debug('timeout error on waiting boxes')
 
 server_agent = None
-def server_start(**local_config):
+async def server_start(**local_config):
     global server_agent
     if server_agent:
         return server_agent
 
     server_agent = ServerAgent(**local_config)
     server_agent.connect()
+    asyncio.ensure_future(server_agent.update())    
     return server_agent
 
 client_agent = None
@@ -139,4 +140,5 @@ async def client_connect(**local_config):
     client_agent = ClientAgent(**local_config)
     client_agent.connect()
     await client_agent.get_boxes()
+    asyncio.ensure_future(client_agent.watch_boxes())
     return client_agent

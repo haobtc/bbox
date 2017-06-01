@@ -132,14 +132,12 @@ async def http_server(loop=None):
     tup_config.parse_local()
 
     # server etcd agent
-    dsc.server_start(**tup_config.local)
+    await dsc.server_start(**tup_config.local)
     srvs = list(srv_dict.keys())
     await dsc.server_agent.register(srvs)
-    asyncio.ensure_future(dsc.server_agent.update())
     
     # client etcd agent
     await dsc.client_connect(**tup_config.local)
-    asyncio.ensure_future(dsc.client_agent.watch_boxes())
     
     app = web.Application()
     app.router.add_post('/jsonrpc/2.0/api', handle)
