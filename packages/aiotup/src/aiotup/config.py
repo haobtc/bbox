@@ -18,6 +18,15 @@ class LocalConfig:
     def get(self, key, default=None):
         return self.c.get(key, default=default)
 
+    def keys(self):
+        return self.c.keys()
+
+    def values(self):
+        return self.c.values()
+
+    def items(self):
+        return self.c.items()
+
     @classmethod
     def parse(cls):
         ''' Parse config from $PWD/tup.config.json

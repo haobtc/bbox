@@ -6,6 +6,7 @@ import json
 from aiohttp import web
 import aiotup.discovery as dsc
 from functools import wraps
+import aiotup.config as tup_config
 
 DEBUG = True
 
@@ -55,10 +56,10 @@ class Request:
                 raise TupError('invalid method',
                                'method should be string')
             
-            m = re.match(r'(\w+)\.(\w+)$', method)
+            m = re.match(r'(\w[\.\w]*)::(\w+)$', method)
             if not m:
                 raise TupError('invalid method',
-                               'Method should be ID.ID')
+                               'Method should be ID::ID')
 
             srv_name = m.group(1)
             self.method = m.group(2)
@@ -67,8 +68,12 @@ class Request:
                 raise TupError(
                     'service not found',
                     'server {} not found'.format(srv_name))
-            
-            fn = self.srv.methods[self.method]
+            try:
+                fn = self.srv.methods[self.method]
+            except KeyError:
+                raise TupError('method not found',
+                               'Method {} does not exist'.format(self.method))
+
             res = await fn(self, *self.params)
             resp = {'result': res,
                     'id': self.req_id,
@@ -123,22 +128,28 @@ async def index(request):
 async def http_server(loop=None):
     if loop is None:
         loop = asyncio.get_event_loop()
-    agent = dsc.start()
-    await agent.pickup_bind()
-    srvs = srv_dict.keys()
-    await agent.add_services(srvs)
+    assert tup_config.local
+    tup_config.parse_local()
+
+    # server etcd agent
+    dsc.server_start(**tup_config.local)
+    srvs = list(srv_dict.keys())
+    await dsc.server_agent.register(srvs)
+    asyncio.ensure_future(dsc.server_agent.update())
+    
+    # client etcd agent
+    await dsc.client_connect(**tup_config.local)
+    asyncio.ensure_future(dsc.client_agent.watch_boxes())
     
     app = web.Application()
     app.router.add_post('/jsonrpc/2.0/api', handle)
     app.router.add_route('*', '/jsonrpc/2.0/ws', handle_ws)
     app.router.add_get('/', index)
 
-    host, port = agent.bind.split(':')
-    print('got bind {}'.format(agent.bind))
-    #web.run_app(app, host=host, port=port)
-
+    host, port = dsc.server_agent.bind.split(':')
+    logging.info('box registered as {}'.format(dsc.server_agent.bind))
+    print('box registered as {}'.format(dsc.server_agent.bind))    
     handler = app.make_handler()
     srv = await loop.create_server(handler, host, port)
-    print('srv', srv)
     return srv, handler
     

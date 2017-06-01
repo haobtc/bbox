@@ -34,7 +34,7 @@ def main():
 
     r = tup_server.http_server(loop)
     srv, handler = loop.run_until_complete(r)
-    
+
     try:
         loop.run_forever()
     except KeyboardInterrupt:
