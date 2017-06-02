@@ -153,7 +153,6 @@ class ClientAgent(EtcdClient):
         assert '/' not in sec
         assert '/' not in key
 
-
         etcd_key = self.path('configs/{}/{}'.format(sec, key))
         old_value = tup_config.grand.get(sec, key)
         value_json = json.dumps(value, sort_keys=True)
@@ -213,7 +212,7 @@ class ClientAgent(EtcdClient):
         async def onchange(r):
             return await self.get_configs()
         return await self.watch_changes('configs', onchange)
-        
+
 server_agent = None
 async def server_start(**local_config):
     global server_agent

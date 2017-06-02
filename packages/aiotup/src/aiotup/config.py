@@ -66,4 +66,25 @@ class GrandConfig:
     def dump_json(self):
         return json_dumps(self.sections)
 
+    def compare_sections(self, new_sections):
+        new_vset = set()
+        vset = set()
+        for sec, section in sorted(new_sections.items()):
+            for key, value in sorted(section.items()):
+                value = json.dumps(value, sort_keys=True)
+                new_vset.add((sec, key, value))
+
+        for sec, section in sorted(self.sections.items()):
+            for key, value in sorted(section.items()):
+                value = json.dumps(value, sort_keys=True)
+                vset.add((sec, key, value))
+
+        rem_set = vset - new_vset
+        add_set = new_vset - vset
+
+        new_2set = set((sec, key) for (sec, key, value) in add_set)
+
+        rem_set = set((sec, key, value) for (sec, key, value) in rem_set if (sec, key) not in new_2set)
+        return rem_set, add_set
+
 grand = GrandConfig()

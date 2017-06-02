@@ -49,6 +49,19 @@ async def list_config():
     data = tup_config.grand.dump_json()
     print(data)
 
+async def load_config(jsonfile):
+    with open(jsonfile, 'r', encoding='utf-8') as f:
+        new_sections = json.load(f)
+    rem_set, add_set = tup_config.grand.compare_sections(new_sections)
+    #print(rem_set, add_set)
+    for sec, key, value in rem_set:
+        print("delete", sec, key)
+        await tup_dsc.client_agent.del_config(sec, key)
+    for sec, key, value in add_set:
+        value = json.loads(value)
+        print("set", sec, key)
+        await tup_dsc.client_agent.set_config(sec, key, value)
+
 def help(f=sys.stdout):
     print('Commands', file=f)
     print(' get sec.key|sec  - get config or section', file=f)
@@ -56,6 +69,7 @@ def help(f=sys.stdout):
     print(' list  - list configs', file=f)
     print(' del sec.key|sec  - delete config or section', file=f)
     print(' clear  - clear configs', file=f)
+    print(' load config.json  - clear configs', file=f)
 
 async def main():
     tup_config.parse_local()
@@ -73,6 +87,8 @@ async def main():
             await clear_config(*args.param)
         elif args.op == 'list':
             await list_config(*args.param)
+        elif args.op == 'load':
+            await load_config(*args.param)
         else:
             help()
     finally:

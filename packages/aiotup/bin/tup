@@ -8,14 +8,15 @@ function help() {
     echo 'tup - rpc framework'
     echo "usage: $0 <command> [options]"
     echo 'commands'
-    echo ' init <dir>   - init a tup project'
-    echo ' start modspec [modspec]  - start rpc server'
+    echo ' init <dir>                - init a tup project'
+    echo ' start modspec [modspec]   - start rpc server'
     echo ' rpc srv::method param [param]  - trigger rpc request'
     echo ' config set sec/key value  - set grand config'
     echo ' config get <sec/key|sec>  - print grand config by key or section'
     echo ' config del <sec/key|sec>  - delete given config key'    
-    echo ' config list         - list all grand config'
-    echo ' config clear        - clear all grand config'
+    echo ' config list               - list all grand config'
+    echo ' config clear              - clear all grand config'
+    echo ' config load <config.json> - clear all grand config'    
 }
 
 case "$1" in
