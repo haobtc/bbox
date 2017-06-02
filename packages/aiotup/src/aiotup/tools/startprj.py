@@ -4,6 +4,7 @@ import asyncio
 import argparse
 import aiotup.server as tup_server
 import aiotup.config as config
+import aiotup.discovery as tup_dsc
 
 parser = argparse.ArgumentParser(
     description='start tup python project')
@@ -22,7 +23,7 @@ parser.add_argument(
 
 def main():
     config.parse_local()
-    if config.local.language != 'python3':
+    if config.local['language'] != 'python3':
         print('language must be python3', file=sys.stderr)
         sys.exit(1)
     args = parser.parse_args()
@@ -38,8 +39,9 @@ def main():
     try:
         loop.run_forever()
     except KeyboardInterrupt:
+        if tup_dsc.server_agent:
+            loop.run_until_complete(tup_dsc.server_agent.deregister())
         loop.run_until_complete(handler.finish_connections())
-        pass
 
 
 if __name__ == '__main__':

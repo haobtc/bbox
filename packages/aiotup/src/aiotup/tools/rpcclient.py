@@ -6,6 +6,7 @@ import argparse
 import aiotup.client as tup_client
 import aiotup.config as tup_config
 import aiotup.discovery as tup_dsc
+from aiotup.utils import guess_json
 
 parser = argparse.ArgumentParser(
     description='test an rpc interface')
@@ -50,18 +51,8 @@ async def main():
     args = parser.parse_args()
 
     srv, method = args.srv_method.split('::')
-    ps = []
-    for p in args.param:
-        if p == 'null':
-            p = None
-        elif p.isdigit():
-            p = int(p)
-        elif p.startswith('{') or p.startswith('['):
-            p = json.loads(p)
-        elif re.match(r'-?\d*(\.\d+)?$', p):
-            p = float(p)
 
-        ps.append(p)
+    ps = [guess_json(p) for p in args.param]
 
     if args.dispatch_policy == 'random':
         tup_client.engine.policy = tup_client.engine.RANDOM
