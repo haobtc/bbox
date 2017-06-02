@@ -47,7 +47,7 @@ class Request:
             if (not isinstance(self.req_id, str) or
                 self.req_id is None):
                 raise TupError('invalpid reqid',
-                                   '{}'.format(self.req_id))
+                               '{}'.format(self.req_id))
             
             self.params = self.body.get('params', [])
 
@@ -104,7 +104,8 @@ class Request:
 
     async def handle_ws(self, ws):
         resp = await self.handle()
-        ws.send_str(json.dumps(resp))
+        if resp:
+            ws.send_json(resp)
         return resp
         
 async def handle(request):
@@ -114,7 +115,7 @@ async def handle(request):
     return web.json_response(resp)
 
 async def handle_ws(request):
-    ws = web.WebSocketResponse()
+    ws = web.WebSocketResponse(autoping=True)
     await ws.prepare(request)
     
     async for req_msg in ws:

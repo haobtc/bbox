@@ -32,7 +32,7 @@ class HttpClient:
             'method': method,
             'params': params
             }
-        async with self.session.post(url, json=payload) as resp:
+        async with self.session.post(url, json=payload, timeout=10) as resp:
             ret = await resp.text()
             return ret
 
@@ -64,7 +64,7 @@ class WebSocketClient:
         
         url = self.url_prefix + '/jsonrpc/2.0/ws'
         try:
-            ws = await self.session.ws_connect(url, autoclose=False, autoping=False)
+            ws = await self.session.ws_connect(url, autoclose=False, autoping=False, heartbeat=1.0)
             self.ws = ws
         except OSError:
             logging.warn('connect to %s failed', url)
@@ -87,7 +87,7 @@ class WebSocketClient:
         channel = Channel(1)
         self.waiters[req_id] = channel
         try:
-            await self.ws.send_str(json.dumps(payload))
+            await self.ws.send_json(payload)
             r = await channel.get()
             #del self.waiters[req_id]
             return r
