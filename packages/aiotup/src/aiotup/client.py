@@ -12,9 +12,15 @@ import aiotup.config as config
 import aiotup.discovery as dsc
 from aiotup.exceptions import ConnectionError
 
+try:
+    import selectors
+except ImportError:
+    from asyncio import selectors
+
 class HttpClient:
     def __init__(self, url_prefix='http://localhost:8080'):
         self.url_prefix = url_prefix
+        self.session = aiohttp.ClientSession()
 
     async def request(self, srv, method, *params):
         url = urljoin(self.url_prefix,
@@ -26,16 +32,13 @@ class HttpClient:
             'method': method,
             'params': params
             }
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                    url,
-                    json=payload
-            ) as resp:
-                ret = await resp.text()
-                return ret
+        async with self.session.post(url, json=payload) as resp:
+            ret = await resp.text()
+            return ret
 
 class WebSocketClient:
     def __init__(self, url_prefix='ws://localhost:8080'):
+        self.session = aiohttp.ClientSession()        
         self.url_prefix = url_prefix
         self.waiters = {}
         self.ws = None
@@ -61,7 +64,7 @@ class WebSocketClient:
         
         url = self.url_prefix + '/jsonrpc/2.0/ws'
         try:
-            ws = await websockets.connect(url)
+            ws = await self.session.ws_connect(url, autoclose=False, autoping=False)
             self.ws = ws
         except OSError:
             logging.warn('connect to %s failed', url)
@@ -84,7 +87,7 @@ class WebSocketClient:
         channel = Channel(1)
         self.waiters[req_id] = channel
         try:
-            await self.ws.send(json.dumps(payload))
+            await self.ws.send_str(json.dumps(payload))
             r = await channel.get()
             #del self.waiters[req_id]
             return r
@@ -107,12 +110,32 @@ class WebSocketClient:
             if not self.ws:
                 await asyncio.sleep(1.0)
                 continue
-            try:
-                data = await self.ws.recv()
-            except websockets.exceptions.ConnectionClosed:
-                return await self.onclosed()
+            #try:
 
-            data = json.loads(data)
+            #except websockets.exceptions.ConnectionClosed:
+            #    return await self.onclosed()
+            msg = await self.ws.receive()            
+            if msg.type == aiohttp.WSMsgType.TEXT:
+                data = json.loads(msg.data)
+            elif msg.type == aiohttp.WSMsgType.BINARY:
+                continue
+            elif msg.type == aiohttp.WSMsgType.PING:
+                self.ws.pong()
+                continue
+            elif msg.type == aiohttp.WSMsgType.PONG:
+                continue
+            elif msg.type == aiohttp.WSMsgType.CLOSE:
+                #yield from ws.close()
+                return await self.onclosed()
+            elif msg.type == aiohttp.WSMsgType.ERROR:
+                #print('Error during receive %s' % self.ws.exception())
+                logging.debug('error during received %s', self.ws.exception())
+                return await self.onclosed()
+            elif msg.type == aiohttp.WSMsgType.CLOSED:
+                print('closed')
+                return
+
+            #data = json.loads(data)
             req_id = data.get('id')
             if req_id:
                 channel = self.waiters.get(req_id)
