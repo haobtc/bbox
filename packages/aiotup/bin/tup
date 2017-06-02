@@ -6,17 +6,17 @@ export PY3='python3'
 
 function help() {
     echo 'tup - rpc framework'
-    echo "usage: $0 <command> [options]"
+    echo "usage: $0 <command> [args] [options]"
     echo 'commands'
-    echo ' init <dir>                - init a tup project'
+    echo ' init                      - init a tup project'
     echo ' start modspec [modspec]   - start rpc server'
-    echo ' rpc srv::method param [param]  - trigger rpc request'
+    echo ' rpc srv::method arg [arg]  - trigger rpc request'
     echo ' config set sec/key value  - set grand config'
     echo ' config get <sec/key|sec>  - print grand config by key or section'
-    echo ' config del <sec/key|sec>  - delete given config key'    
-    echo ' config list               - list all grand config'
+    echo ' config del <sec/key|sec>  - delete given config key'
     echo ' config clear              - clear all grand config'
-    echo ' config load <config.json> - clear all grand config'    
+    echo ' config dump               - dump all grand config'
+    echo ' config load <config.json> - load config from json file'
 }
 
 case "$1" in

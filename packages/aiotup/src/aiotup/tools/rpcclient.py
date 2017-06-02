@@ -14,12 +14,12 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     'srv_method',
     type=str,
-    help='service')
+    help='service::method')
 
 parser.add_argument(
     'param',
     type=str,
-    nargs='+',
+    nargs='*',
     help='params')
 
 parser.add_argument(

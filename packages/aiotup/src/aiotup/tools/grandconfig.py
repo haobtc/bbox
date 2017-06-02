@@ -45,7 +45,7 @@ async def del_config(sec_key):
 async def clear_config():
     return await tup_dsc.client_agent.clear_config()
 
-async def list_config():
+async def dump_config():
     data = tup_config.grand.dump_json()
     print(data)
 
@@ -66,7 +66,7 @@ def help(f=sys.stdout):
     print('Commands', file=f)
     print(' get sec.key|sec  - get config or section', file=f)
     print(' set sec.key value  - set config', file=f)
-    print(' list  - list configs', file=f)
+    print(' dump  - dump configs in json format', file=f)
     print(' del sec.key|sec  - delete config or section', file=f)
     print(' clear  - clear configs', file=f)
     print(' load config.json  - clear configs', file=f)
@@ -85,8 +85,8 @@ async def main():
             await del_config(*args.param)
         elif args.op == 'clear':
             await clear_config(*args.param)
-        elif args.op == 'list':
-            await list_config(*args.param)
+        elif args.op == 'dump':
+            await dump_config(*args.param)
         elif args.op == 'load':
             await load_config(*args.param)
         else:

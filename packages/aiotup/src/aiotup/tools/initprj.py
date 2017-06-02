@@ -6,10 +6,6 @@ import argparse
 parser = argparse.ArgumentParser(
     description='init a tup project')
 parser.add_argument(
-    'dir',
-    type=str,
-    help='the directory to init')
-parser.add_argument(
     '--language',
     type=str,
     default='python3',
@@ -22,14 +18,17 @@ parser.add_argument(
 
 def main():
     args = parser.parse_args()
-    prjdir = args.dir
-    if os.path.exists(prjdir):
-        print('project directory already exist!',
+
+
+    config_file = os.path.join(os.getcwd(), 'tup.config.json')
+    
+    if os.path.exists(config_file):
+        print('project already initialized!',
               file=sys.stderr)
         sys.exit(1)
-        
-    os.makedirs(prjdir)
 
+    prjname = os.path.basename(os.getcwd())
+    
     lang = args.language
     if lang not in ('python3', 'python'):
         print('language {} not supported'.format(lang),
@@ -40,14 +39,13 @@ def main():
         lang = 'python3'
 
     config_json = {
-        'name': prjdir,
+        'name': prjname,
         'etcd': ['127.0.0.1:2379'],
         'prefix': args.prefix or uuid.uuid4().hex,
         'language': lang,
         'port_range': [30000, 40000],
         'bind_ip': '127.0.0.1'
         }
-    config_file = os.path.join(prjdir, 'tup.config.json')
     with open(config_file, 'w', encoding='utf-8') as f:
         json.dump(config_json, f, indent=2, sort_keys=True)
 
