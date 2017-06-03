@@ -6,7 +6,6 @@ from aiochannel import Channel
 from aiochannel.errors import ChannelClosed
 from urllib.parse import urljoin
 import json
-import websockets
 import uuid
 import aiotup.config as config
 import aiotup.discovery as dsc
@@ -110,10 +109,6 @@ class WebSocketClient:
             if not self.ws:
                 await asyncio.sleep(1.0)
                 continue
-            #try:
-
-            #except websockets.exceptions.ConnectionClosed:
-            #    return await self.onclosed()
             msg = await self.ws.receive()            
             if msg.type == aiohttp.WSMsgType.TEXT:
                 data = json.loads(msg.data)
@@ -125,10 +120,8 @@ class WebSocketClient:
             elif msg.type == aiohttp.WSMsgType.PONG:
                 continue
             elif msg.type == aiohttp.WSMsgType.CLOSE:
-                #yield from ws.close()
                 return await self.onclosed()
             elif msg.type == aiohttp.WSMsgType.ERROR:
-                #print('Error during receive %s' % self.ws.exception())
                 logging.debug('error during received %s', self.ws.exception())
                 return await self.onclosed()
             elif msg.type == aiohttp.WSMsgType.CLOSED:
