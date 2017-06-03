@@ -1,7 +1,7 @@
 import os
 import json
 import sys
-from .utils import json_dumps
+from .utils import json_pp, json_to_str
 
 local = None
 def parse_local():
@@ -64,19 +64,19 @@ class GrandConfig:
         self.sections = {}
 
     def dump_json(self):
-        return json_dumps(self.sections)
+        return json_pp(self.sections)
 
     def compare_sections(self, new_sections):
         new_vset = set()
         vset = set()
         for sec, section in sorted(new_sections.items()):
             for key, value in sorted(section.items()):
-                value = json.dumps(value, sort_keys=True)
+                value = json_to_str(value)
                 new_vset.add((sec, key, value))
 
         for sec, section in sorted(self.sections.items()):
             for key, value in sorted(section.items()):
-                value = json.dumps(value, sort_keys=True)
+                value = json_to_str(value)
                 vset.add((sec, key, value))
 
         rem_set = vset - new_vset

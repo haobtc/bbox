@@ -6,7 +6,7 @@ import argparse
 import aiobbox.client as bbox_client
 import aiobbox.config as bbox_config
 import aiobbox.discovery as bbox_dsc
-from aiobbox.utils import guess_json, json_dumps
+from aiobbox.utils import guess_json, json_pp
 
 parser = argparse.ArgumentParser(
     description='test an rpc interface')
@@ -28,7 +28,7 @@ async def get_config(sec_key):
         r = bbox_config.grand.get_strict(sec, key)
     else:
         r = bbox_config.grand.get_section_strict(sec_key)
-    print(json_dumps(r))
+    print(json_pp(r))
 
 async def set_config(sec_key, value):
     sec, key = sec_key.split('/')

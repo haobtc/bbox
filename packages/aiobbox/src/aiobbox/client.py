@@ -99,6 +99,7 @@ class WebSocketClient:
         self.ws = None        
         for req_id, channel in self.waiters.items():
             channel.close()
+        self.session.close()
         self.waiters = {}
 
     async def connect_wait(self):
@@ -121,7 +122,8 @@ class WebSocketClient:
             elif msg.type == aiohttp.WSMsgType.CLOSE:
                 return await self.onclosed()
             elif msg.type == aiohttp.WSMsgType.ERROR:
-                logging.debug('error during received %s', self.ws.exception())
+                logging.debug('error during received %s',
+                              self.ws.exception() if self.ws else None)
                 return await self.onclosed()
             elif msg.type == aiohttp.WSMsgType.CLOSED:
                 print('closed')
@@ -216,7 +218,7 @@ class FullConnectEngine:
             raise AttributeError
         return ServiceRef(name, self)
 
-    async def request(self, srv, method, *params, conn_retry=0, retry=0):
+    async def request(self, srv, method, *params, retry=0):
         agent = bbox_dsc.client_agent
         assert agent
         await self.ensure_clients(srv)
@@ -224,7 +226,6 @@ class FullConnectEngine:
         if not client:
             raise ConnectionError(
                 'no available rpc server')
-
         try:
             return await client.request(srv, method, *params)
         except ConnectionError:
@@ -235,7 +236,6 @@ class FullConnectEngine:
             
         return await self.request(srv, method,
                                   *params,
-                                  conn_retry=conn_retry,
                                   retry=retry-1)
     
 #engine = MasterStandbyEngine()

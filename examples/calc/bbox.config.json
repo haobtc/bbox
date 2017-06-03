@@ -4,7 +4,7 @@
   ],
   "prefix": "b3e8a56ead1a4bebb5c7ff607e27b1c8",
   "bind_ip": "127.0.0.1",
-  "port_range": [30000, 40000],
+  "port_range": [30000, 31000],
   "language": "python3",
   "name": "calc"
 }

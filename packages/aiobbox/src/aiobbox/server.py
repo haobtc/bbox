@@ -126,19 +126,17 @@ async def handle_ws(request):
 async def index(request):
     return web.Response(text='hello')
 
-async def http_server(loop=None):
+async def http_server(boxid, loop=None):
     if loop is None:
         loop = asyncio.get_event_loop()
     assert bbox_config.local
-    bbox_config.parse_local()
 
-    # server etcd agent
-    await dsc.server_start(**bbox_config.local)
-    srvs = list(srv_dict.keys())
-    await dsc.server_agent.register(srvs)
-    
     # client etcd agent
     await dsc.client_connect(**bbox_config.local)
+    
+    # server etcd agent
+    srvs = list(srv_dict.keys())    
+    await dsc.server_start(boxid, srvs, **bbox_config.local)
     
     app = web.Application()
     app.router.add_post('/jsonrpc/2.0/api', handle)

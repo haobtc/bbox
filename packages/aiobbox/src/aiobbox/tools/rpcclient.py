@@ -64,7 +64,6 @@ async def main():
                 srv,
                 method,
                 *ps,
-                conn_retry=args.retry,
                 retry=args.retry)
             print(r)
             if i >= args.ntimes - 1:

@@ -1,4 +1,5 @@
 import os, sys
+import uuid
 import json
 import asyncio
 import argparse
@@ -13,13 +14,13 @@ parser.add_argument(
     'module',
     type=str,
     nargs='+',
-    help='the bbox sevice module to load')
+    help='the box service module to load')
 
 parser.add_argument(
-    '--bind',
+    '--boxid',
     type=str,
-    default='localhost:8080',
-    help='server host')
+    default='',
+    help='box id')
 
 def main():
     bbox_config.parse_local()
@@ -27,13 +28,14 @@ def main():
         print('language must be python3', file=sys.stderr)
         sys.exit(1)
     args = parser.parse_args()
+    if not args.boxid:
+        args.boxid = uuid.uuid4().hex
     for mod in args.module:
         __import__(mod)
 
-    #host, port = args.bind.split(':')
-    loop = asyncio.get_event_loop()
 
-    r = bbox_server.http_server(loop)
+    loop = asyncio.get_event_loop()
+    r = bbox_server.http_server(args.boxid, loop=loop)
     srv, handler = loop.run_until_complete(r)
 
     try:

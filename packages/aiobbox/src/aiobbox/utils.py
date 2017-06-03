@@ -14,5 +14,8 @@ def guess_json(p):
         p = float(p)
     return p
 
-def json_dumps(v):
+def json_pp(v):
     return json.dumps(v, indent=2, sort_keys=True)
+
+def json_to_str(v):
+    return json.dumps(v, sort_keys=True)    

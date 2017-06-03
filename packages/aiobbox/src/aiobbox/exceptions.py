@@ -6,3 +6,6 @@ class ConnectionError(BaseError):
 
 class RegisterFailed(BaseError):
     pass
+
+class ETCDError(BaseError):
+    pass
