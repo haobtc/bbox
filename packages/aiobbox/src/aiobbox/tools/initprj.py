@@ -4,7 +4,7 @@ import json
 import argparse
 
 parser = argparse.ArgumentParser(
-    description='init a tup project')
+    description='init a bbox project')
 parser.add_argument(
     '--language',
     type=str,
@@ -20,7 +20,7 @@ def main():
     args = parser.parse_args()
 
 
-    config_file = os.path.join(os.getcwd(), 'tup.config.json')
+    config_file = os.path.join(os.getcwd(), 'bbox.config.json')
     
     if os.path.exists(config_file):
         print('project already initialized!',

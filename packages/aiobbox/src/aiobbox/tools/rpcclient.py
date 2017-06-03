@@ -3,10 +3,10 @@ import re
 import json
 import asyncio
 import argparse
-import aiotup.client as tup_client
-import aiotup.config as tup_config
-import aiotup.discovery as tup_dsc
-from aiotup.utils import guess_json
+import aiobbox.client as bbox_client
+import aiobbox.config as bbox_config
+import aiobbox.discovery as bbox_dsc
+from aiobbox.utils import guess_json
 
 parser = argparse.ArgumentParser(
     description='test an rpc interface')
@@ -47,7 +47,7 @@ parser.add_argument(
     help='dispatch request to clients')
 
 async def main():
-    tup_config.parse_local()
+    bbox_config.parse_local()
     args = parser.parse_args()
 
     srv, method = args.srv_method.split('::')
@@ -55,12 +55,12 @@ async def main():
     ps = [guess_json(p) for p in args.param]
 
     if args.dispatch_policy == 'random':
-        tup_client.engine.policy = tup_client.engine.RANDOM
+        bbox_client.engine.policy = bbox_client.engine.RANDOM
 
     try:
-        await tup_dsc.client_connect(**tup_config.local)
+        await bbox_dsc.client_connect(**bbox_config.local)
         for i in range(args.ntimes):
-            r = await tup_client.engine.request(
+            r = await bbox_client.engine.request(
                 srv,
                 method,
                 *ps,
@@ -71,8 +71,8 @@ async def main():
                 break
             await asyncio.sleep(args.interval)
     finally:
-        if tup_dsc.client_agent:
-            tup_dsc.client_agent.close()
+        if bbox_dsc.client_agent:
+            bbox_dsc.client_agent.close()
 
 
 if __name__ == '__main__':

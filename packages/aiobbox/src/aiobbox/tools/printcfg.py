@@ -1,10 +1,10 @@
 import os, sys
 import json
 import argparse
-from aiotup import config
+from aiobbox import config
 
 parser = argparse.ArgumentParser(
-    description='start tup python project')
+    description='start bbox python project')
 
 parser.add_argument(
     'key',

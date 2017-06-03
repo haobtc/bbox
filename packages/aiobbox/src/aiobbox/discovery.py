@@ -6,8 +6,8 @@ import time
 import asyncio
 import aio_etcd as etcd
 from collections import defaultdict
-from aiotup.exceptions import RegisterFailed
-import aiotup.config as tup_config
+from aiobbox.exceptions import RegisterFailed
+import aiobbox.config as bbox_config
 
 BOX_TTL = 10
 
@@ -154,7 +154,7 @@ class ClientAgent(EtcdClient):
         assert '/' not in key
 
         etcd_key = self.path('configs/{}/{}'.format(sec, key))
-        old_value = tup_config.grand.get(sec, key)
+        old_value = bbox_config.grand.get(sec, key)
         value_json = json.dumps(value, sort_keys=True)
         if old_value:
             old_value_json = json.dumps(old_value, sort_keys=True)
@@ -162,7 +162,7 @@ class ClientAgent(EtcdClient):
         else:
             await self.client.write(etcd_key, value_json, prevExist=False)
 
-        tup_config.grand.set(sec, key, value)        
+        bbox_config.grand.set(sec, key, value)        
 
     async def del_config(self, sec, key):
         assert sec
@@ -170,7 +170,7 @@ class ClientAgent(EtcdClient):
         assert '/' not in sec
         assert '/' not in key
         
-        tup_config.grand.delete(sec, key)
+        bbox_config.grand.delete(sec, key)
         etcd_key = self.path('configs/{}/{}'.format(sec, key))
         await self.client.delete(etcd_key)
 
@@ -178,12 +178,12 @@ class ClientAgent(EtcdClient):
         assert sec
         assert '/' not in sec
         
-        tup_config.grand.delete_section(sec)
+        bbox_config.grand.delete_section(sec)
         etcd_key = self.path('configs/{}'.format(sec))
         await self.client.delete(etcd_key, recursive=True)
         
     async def clear_config(self):
-        tup_config.grand.clear()
+        bbox_config.grand.clear()
         etcd_key = self.path('configs')
         try:
             await self.client.delete(etcd_key, recursive=True)
@@ -195,7 +195,7 @@ class ClientAgent(EtcdClient):
         try:
             r = await self.client.read(self.path('configs'),
                                        recursive=True)
-            new_conf = tup_config.GrandConfig()
+            new_conf = bbox_config.GrandConfig()
             for v in self.walk(r):
                 m = re.match(reg, v.key)
                 if m:
@@ -204,7 +204,7 @@ class ClientAgent(EtcdClient):
                     key = m.group('key')
                     new_conf.set(sec, key, json.loads(v.value))
                     
-            tup_config.grand = new_conf
+            bbox_config.grand = new_conf
         except etcd.EtcdKeyNotFound:
             pass
 

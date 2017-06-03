@@ -8,7 +8,7 @@ def parse_local():
     global local
     if local is None:
         config_path = os.path.join(os.getcwd(),
-                                   'tup.config.json')
+                                   'bbox.config.json')
         with open(config_path, 'r', encoding='utf-8') as f:
             local = json.load(f)
         # validaty

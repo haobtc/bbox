@@ -2,18 +2,18 @@ import os, sys
 import json
 import asyncio
 import argparse
-import aiotup.server as tup_server
-import aiotup.config as config
-import aiotup.discovery as tup_dsc
+import aiobbox.server as bbox_server
+import aiobbox.config as bbox_config
+import aiobbox.discovery as bbox_dsc
 
 parser = argparse.ArgumentParser(
-    description='start tup python project')
+    description='start bbox python project')
 
 parser.add_argument(
     'module',
     type=str,
     nargs='+',
-    help='the tup sevice module to load')
+    help='the bbox sevice module to load')
 
 parser.add_argument(
     '--bind',
@@ -22,8 +22,8 @@ parser.add_argument(
     help='server host')
 
 def main():
-    config.parse_local()
-    if config.local['language'] != 'python3':
+    bbox_config.parse_local()
+    if bbox_config.local['language'] != 'python3':
         print('language must be python3', file=sys.stderr)
         sys.exit(1)
     args = parser.parse_args()
@@ -33,14 +33,14 @@ def main():
     #host, port = args.bind.split(':')
     loop = asyncio.get_event_loop()
 
-    r = tup_server.http_server(loop)
+    r = bbox_server.http_server(loop)
     srv, handler = loop.run_until_complete(r)
 
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        if tup_dsc.server_agent:
-            loop.run_until_complete(tup_dsc.server_agent.deregister())
+        if bbox_dsc.server_agent:
+            loop.run_until_complete(bbox_dsc.server_agent.deregister())
         loop.run_until_complete(handler.finish_connections())
 
 

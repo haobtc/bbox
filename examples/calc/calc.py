@@ -1,7 +1,7 @@
 import sys
 import asyncio
-from aiotup.server import Service
-import aiotup.discovery as discovery
+from aiobbox.server import Service
+import aiobbox.discovery as discovery
 
 srv = Service('calc')
 

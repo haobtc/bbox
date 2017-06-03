@@ -7,9 +7,8 @@ from aiochannel.errors import ChannelClosed
 from urllib.parse import urljoin
 import json
 import uuid
-import aiotup.config as config
-import aiotup.discovery as dsc
-from aiotup.exceptions import ConnectionError
+import aiobbox.discovery as bbox_dsc
+from aiobbox.exceptions import ConnectionError
 
 try:
     import selectors
@@ -174,7 +173,7 @@ class FullConnectEngine:
         #self.policy = 'RANDOM'
 
     async def ensure_clients(self, srv):
-        agent = dsc.client_agent
+        agent = bbox_dsc.client_agent
         assert agent
 
         boxes = agent.route[srv]
@@ -199,7 +198,7 @@ class FullConnectEngine:
 
     def get_client(self, srv, policy=None):
         policy = policy or self.policy
-        agent = dsc.client_agent
+        agent = bbox_dsc.client_agent
         clients = []
         for box in agent.route[srv]:
             client = self.pool.get(box)
@@ -218,7 +217,7 @@ class FullConnectEngine:
         return ServiceRef(name, self)
 
     async def request(self, srv, method, *params, conn_retry=0, retry=0):
-        agent = dsc.client_agent
+        agent = bbox_dsc.client_agent
         assert agent
         await self.ensure_clients(srv)
         client = self.get_client(srv)

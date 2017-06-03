@@ -5,10 +5,10 @@ export PY3='python3'
 
 
 function help() {
-    echo 'tup - rpc framework'
+    echo 'bbox - rpc framework'
     echo "usage: $0 <command> [args] [options]"
     echo 'commands'
-    echo ' init                      - init a tup project'
+    echo ' init                      - init a bbox project'
     echo ' start modspec [modspec]   - start rpc server'
     echo ' rpc srv::method arg [arg]  - trigger rpc request'
     echo ' config set sec/key value  - set grand config'
@@ -21,12 +21,12 @@ function help() {
 
 case "$1" in
     init)
-        exec $PY3 -m aiotup.tools.initprj "${@:2}"
+        exec $PY3 -m aiobbox.tools.initprj "${@:2}"
         ;;
     start)
-        lang=`$PY3 -m aiotup.tools.printcfg language`
+        lang=`$PY3 -m aiobbox.tools.printcfg language`
         if [ $lang == 'python3' ]; then
-            exec $PY3 -m aiotup.tools.startprj "${@:2}"
+            exec $PY3 -m aiobbox.tools.startprj "${@:2}"
         else
             # TODO: support nodejs
             echo language $lang not supported
@@ -34,10 +34,10 @@ case "$1" in
         fi
         ;;
     rpc)
-        exec $PY3 -m aiotup.tools.rpcclient "${@:2}"
+        exec $PY3 -m aiobbox.tools.rpcclient "${@:2}"
         ;;
     config)
-        exec $PY3 -m aiotup.tools.grandconfig "${@:2}"
+        exec $PY3 -m aiobbox.tools.grandconfig "${@:2}"
         ;;
     *)
         help

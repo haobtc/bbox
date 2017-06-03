@@ -4,9 +4,9 @@ import os, json
 import asyncio
 import json
 from aiohttp import web
-import aiotup.discovery as dsc
+import aiobbox.discovery as dsc
 from functools import wraps
-import aiotup.config as tup_config
+import aiobbox.config as bbox_config
 
 DEBUG = True
 
@@ -29,10 +29,10 @@ class Service(object):
             return __w
         return decorator
 
-class TupError(Exception):
+class BboxError(Exception):
     def __init__(self, code, msg=None):
         self.code = code
-        super(TupError, self).__init__(msg or code)
+        super(BboxError, self).__init__(msg or code)
 
 class Request:
     def __init__(self, body):
@@ -46,39 +46,39 @@ class Request:
             self.req_id = self.body.get('id')
             if (not isinstance(self.req_id, str) or
                 self.req_id is None):
-                raise TupError('invalpid reqid',
+                raise BboxError('invalpid reqid',
                                '{}'.format(self.req_id))
             
             self.params = self.body.get('params', [])
 
             method = self.body['method']
             if not isinstance(method, str):
-                raise TupError('invalid method',
+                raise BboxError('invalid method',
                                'method should be string')
             
             m = re.match(r'(\w[\.\w]*)::(\w+)$', method)
             if not m:
-                raise TupError('invalid method',
+                raise BboxError('invalid method',
                                'Method should be ID::ID')
 
             srv_name = m.group(1)
             self.method = m.group(2)
             self.srv = srv_dict.get(srv_name)
             if not self.srv:
-                raise TupError(
+                raise BboxError(
                     'service not found',
                     'server {} not found'.format(srv_name))
             try:
                 fn = self.srv.methods[self.method]
             except KeyError:
-                raise TupError('method not found',
+                raise BboxError('method not found',
                                'Method {} does not exist'.format(self.method))
 
             res = await fn(self, *self.params)
             resp = {'result': res,
                     'id': self.req_id,
                     'error': None}
-        except TupError as e:
+        except BboxError as e:
             error_info = {
                 'message': getattr(e, 'message', str(e)),
                 'code': e.code
@@ -129,16 +129,16 @@ async def index(request):
 async def http_server(loop=None):
     if loop is None:
         loop = asyncio.get_event_loop()
-    assert tup_config.local
-    tup_config.parse_local()
+    assert bbox_config.local
+    bbox_config.parse_local()
 
     # server etcd agent
-    await dsc.server_start(**tup_config.local)
+    await dsc.server_start(**bbox_config.local)
     srvs = list(srv_dict.keys())
     await dsc.server_agent.register(srvs)
     
     # client etcd agent
-    await dsc.client_connect(**tup_config.local)
+    await dsc.client_connect(**bbox_config.local)
     
     app = web.Application()
     app.router.add_post('/jsonrpc/2.0/api', handle)
