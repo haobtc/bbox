@@ -11,12 +11,13 @@ function help() {
     echo ' init                      - init a bbox project'
     echo ' start modspec [modspec]   - start rpc server'
     echo ' rpc srv::method arg [arg]  - trigger rpc request'
-    echo ' config set sec/key value  - set grand config'
-    echo ' config get <sec/key|sec>  - print grand config by key or section'
+    echo ' config set sec/key value  - set cluster config'
+    echo ' config get <sec/key|sec>  - print cluster config by key or section'
     echo ' config del <sec/key|sec>  - delete given config key'
-    echo ' config clear              - clear all grand config'
-    echo ' config dump               - dump all grand config'
+    echo ' config clear              - clear all cluster config'
+    echo ' config dump               - dump all cluster config'
     echo ' config load <config.json> - load config from json file'
+    echo ' cluster info              - print boxes in the cluster'
 }
 
 case "$1" in
@@ -37,7 +38,10 @@ case "$1" in
         exec $PY3 -m aiobbox.tools.rpcclient "${@:2}"
         ;;
     config)
-        exec $PY3 -m aiobbox.tools.grandconfig "${@:2}"
+        exec $PY3 -m aiobbox.tools.clusterconfig "${@:2}"
+        ;;
+    cluster)
+        exec $PY3 -m aiobbox.tools.clusterop "${@:2}"
         ;;
     *)
         help

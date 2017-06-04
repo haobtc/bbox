@@ -15,7 +15,7 @@ def parse_local():
         assert local['port_range'][0] < local['port_range'][1]
     return local
 
-class GrandConfig:
+class ClusterConfig:
     def __init__(self):
         self.sections = {}
 
@@ -87,4 +87,4 @@ class GrandConfig:
         rem_set = set((sec, key, value) for (sec, key, value) in rem_set if (sec, key) not in new_2set)
         return rem_set, add_set
 
-grand = GrandConfig()
+cluster = ClusterConfig()

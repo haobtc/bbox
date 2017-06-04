@@ -25,9 +25,9 @@ parser.add_argument(
 async def get_config(sec_key):
     if '/' in sec_key:
         sec, key = sec_key.split('/')
-        r = bbox_config.grand.get_strict(sec, key)
+        r = bbox_config.cluster.get_strict(sec, key)
     else:
-        r = bbox_config.grand.get_section_strict(sec_key)
+        r = bbox_config.cluster.get_section_strict(sec_key)
     print(json_pp(r))
 
 async def set_config(sec_key, value):
@@ -46,13 +46,13 @@ async def clear_config():
     return await bbox_dsc.client_agent.clear_config()
 
 async def dump_config():
-    data = bbox_config.grand.dump_json()
+    data = bbox_config.cluster.dump_json()
     print(data)
 
 async def load_config(jsonfile):
     with open(jsonfile, 'r', encoding='utf-8') as f:
         new_sections = json.load(f)
-    rem_set, add_set = bbox_config.grand.compare_sections(new_sections)
+    rem_set, add_set = bbox_config.cluster.compare_sections(new_sections)
     #print(rem_set, add_set)
     for sec, key, value in rem_set:
         print("delete", sec, key)
@@ -100,5 +100,3 @@ async def main():
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
-
-    #loop.run_forever()

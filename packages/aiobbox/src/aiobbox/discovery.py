@@ -56,12 +56,15 @@ class EtcdClient:
             self.client_failed = False
             return r
         except aiohttp.ClientError as e:
-            logging.error('http client error', exc_info=True)
+            logging.warn('http client error', exc_info=True)
             self.client_failed = True
             raise ETCDError
-                    
+        except etcd.EtcdKeyNotFound:
+            raise
         except (etcd.EtcdException, etcd.EtcdConnectionFailed):
-            logging.error('connection failed')
+            import traceback
+            traceback.print_exc()
+            logging.warn('connection failed')
             self.client_failed = True
             raise ETCDError
 
@@ -98,10 +101,15 @@ class EtcdClient:
                                       wait=True)
                 await changed(chg)
             except asyncio.TimeoutError:
-                logging.debug('timeout error during watching %s', component)
+                logging.debug(
+                    'timeout error during watching %s',
+                    component)
             except ETCDError:
                 logging.debug('etcd error, sleep for a while')
                 await asyncio.sleep(1)
+            except Exception as e:
+                print('xxxx', e)
+                raise
 
 class ServerAgent(EtcdClient):
     def __init__(self, boxid='', prefix='', etcd=None, port_range=None, bind_ip='127.0.0.1', **kw):
@@ -213,7 +221,7 @@ class ClientAgent(EtcdClient):
         assert '/' not in key
 
         etcd_key = self.path('configs/{}/{}'.format(sec, key))
-        old_value = bbox_config.grand.get(sec, key)
+        old_value = bbox_config.cluster.get(sec, key)
         value_json = json_to_str(value)
         if old_value:
             old_value_json = json_to_str(old_value)
@@ -222,14 +230,14 @@ class ClientAgent(EtcdClient):
         else:
             await self.write(etcd_key, value_json,
                              prevExist=False)
-        bbox_config.grand.set(sec, key, value)        
+        bbox_config.cluster.set(sec, key, value)        
 
     async def del_config(self, sec, key):
         assert sec and key
         assert '/' not in sec
         assert '/' not in key
         
-        bbox_config.grand.delete(sec, key)
+        bbox_config.cluster.delete(sec, key)
         etcd_key = self.path('configs/{}/{}'.format(sec, key))
         await self.delete(etcd_key)
 
@@ -237,12 +245,12 @@ class ClientAgent(EtcdClient):
         assert sec
         assert '/' not in sec
         
-        bbox_config.grand.delete_section(sec)
+        bbox_config.cluster.delete_section(sec)
         etcd_key = self.path('configs/{}'.format(sec))
         await self.delete(etcd_key, recursive=True)
         
     async def clear_config(self):
-        bbox_config.grand.clear()
+        bbox_config.cluster.clear()
         etcd_key = self.path('configs')
         try:
             await self.delete(etcd_key, recursive=True)
@@ -255,7 +263,7 @@ class ClientAgent(EtcdClient):
         try:
             r = await self.read(self.path('configs'),
                                 recursive=True)
-            new_conf = bbox_config.GrandConfig()
+            new_conf = bbox_config.ClusterConfig()
             for v in self.walk(r):
                 m = re.match(reg, v.key)
                 if m:
@@ -264,7 +272,7 @@ class ClientAgent(EtcdClient):
                     key = m.group('key')
                     new_conf.set(sec, key, json.loads(v.value))
                     
-            bbox_config.grand = new_conf
+            bbox_config.cluster = new_conf
         except etcd.EtcdKeyNotFound:
             pass
         except ETCDError:
