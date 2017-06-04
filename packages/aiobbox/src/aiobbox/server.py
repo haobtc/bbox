@@ -5,8 +5,7 @@ import asyncio
 import json
 from aiohttp import web
 from functools import wraps
-import aiobbox.config as bbox_config
-from aiobbox.cluster import BoxAgent, ClientAgent
+from aiobbox.cluster import get_box, get_cluster
 
 DEBUG = True
 
@@ -129,24 +128,23 @@ async def index(request):
 async def http_server(boxid, loop=None):
     if loop is None:
         loop = asyncio.get_event_loop()
-    assert bbox_config.local
 
     # client etcd agent
-    await ClientAgent.connect_cluster(**bbox_config.local)
+    await get_cluster().start()
     
     # server etcd agent
-    srvs = list(srv_dict.keys())    
-    await BoxAgent.start_box(boxid, srvs,
-                                **bbox_config.local)
+    srv_namess = list(srv_dict.keys())
+    curr_box = get_box()
+    await curr_box.start(boxid, srv_names)
     
     app = web.Application()
     app.router.add_post('/jsonrpc/2.0/api', handle)
     app.router.add_route('*', '/jsonrpc/2.0/ws', handle_ws)
     app.router.add_get('/', index)
 
-    host, port = BoxAgent.agent.bind.split(':')
-    logging.info('box registered as {}'.format(BoxAgent.agent.bind))
-    print('box registered as {}'.format(BoxAgent.agent.bind))    
+    host, port = curr_box.bind.split(':')
+    logging.info('box registered as {}'.format(curr_box.bind))
+    print('box registered as {}'.format(curr_box.bind))    
     handler = app.make_handler()
     srv = await loop.create_server(handler, host, port)
     return srv, handler

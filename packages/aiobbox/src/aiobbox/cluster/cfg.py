@@ -1,23 +1,57 @@
 import os
+import re
+import time
 import json
+import logging
 import sys
-from .utils import json_pp, json_to_str
+from aiobbox.utils import json_pp, json_to_str
 
-local = None
-def parse_local():
-    global local
-    if local is None:
-        config_path = os.path.join(os.getcwd(),
-                                   'bbox.config.json')
-        with open(config_path, 'r', encoding='utf-8') as f:
-            local = json.load(f)
-        # validaty
-        assert local['port_range'][0] < local['port_range'][1]
-    return local
+class LocalConfig:
+    def __init__(self):
+        self.data = {}
+        
+    def load(self, config_path=None):
+        if config_path is None:
+            config_path = os.path.join(
+                os.getcwd(),
+                'bbox.config.json')
+            
+        self.data['loadtime'] = int(time.time())            
+        if os.path.exists(config_path):
+            with open(config_path, 'r', encoding='utf-8') as f:
+                kw = json.load(f)
+                self.update(**kw)
 
-class ClusterConfig:
+    def update(self, **kw):
+        self.data.update(kw)
+        self.validate()
+        
+    def validate(self):
+        assert self.port_range[0] < self.port_range[1]
+        assert not not self.prefix
+        assert re.match(r'[0-9a-zA-Z\_\.\-\+]+$', self.prefix)
+
+    def keys(self):
+        return self.data.keys()
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __getattr__(self, key):
+        return self.data[key]
+
+_local = LocalConfig()
+def get_localconfig():
+    if not _local.data:
+        _local.load()
+    return _local
+
+class SharedConfig:
     def __init__(self):
         self.sections = {}
+
+    def replace_with(self, newcfg):
+        self.sections = newcfg.sections
 
     def set(self, sec, key, value):
         section = self.sections.setdefault(sec, {})
@@ -82,9 +116,16 @@ class ClusterConfig:
         rem_set = vset - new_vset
         add_set = new_vset - vset
 
-        new_2set = set((sec, key) for (sec, key, value) in add_set)
+        new_2set = set((sec, key)
+                       for (sec, key, value)
+                       in add_set)
 
-        rem_set = set((sec, key, value) for (sec, key, value) in rem_set if (sec, key) not in new_2set)
+        rem_set = set((sec, key, value)
+                      for (sec, key, value)
+                      in rem_set
+                      if (sec, key) not in new_2set)
         return rem_set, add_set
 
-cluster = ClusterConfig()
+_shared = SharedConfig()
+def get_sharedconfig():
+    return _shared

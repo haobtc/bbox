@@ -4,8 +4,7 @@ import json
 import asyncio
 import argparse
 import aiobbox.server as bbox_server
-import aiobbox.config as bbox_config
-from aiobbox.cluster import BoxAgent, ClientAgent
+from aiobbox.cluster import get_box, get_cluster, get_localconfig
 
 parser = argparse.ArgumentParser(
     description='start bbox python project')
@@ -23,8 +22,8 @@ parser.add_argument(
     help='box id')
 
 def main():
-    bbox_config.parse_local()
-    if bbox_config.local['language'] != 'python3':
+    cfg = get_localconfig()
+    if cfg.language != 'python3':
         print('language must be python3', file=sys.stderr)
         sys.exit(1)
     args = parser.parse_args()
@@ -33,7 +32,6 @@ def main():
     for mod in args.module:
         __import__(mod)
 
-
     loop = asyncio.get_event_loop()
     r = bbox_server.http_server(args.boxid, loop=loop)
     srv, handler = loop.run_until_complete(r)
@@ -41,8 +39,7 @@ def main():
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        if BoxAgent.agent:
-            loop.run_until_complete(BoxAgent.agent.deregister())
+        loop.run_until_complete(get_box().deregister())
         loop.run_until_complete(handler.finish_connections())
 
 

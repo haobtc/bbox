@@ -4,8 +4,7 @@ import json
 import asyncio
 import argparse
 import aiobbox.client as bbox_client
-import aiobbox.config as bbox_config
-from aiobbox.cluster import ClientAgent
+from aiobbox.cluster import get_cluster, get_sharedconfig
 from aiobbox.utils import guess_json, json_pp
 
 parser = argparse.ArgumentParser(
@@ -25,42 +24,42 @@ parser.add_argument(
 async def get_config(sec_key):
     if '/' in sec_key:
         sec, key = sec_key.split('/')
-        r = bbox_config.cluster.get_strict(sec, key)
+        r = get_sharedconfig().get_strict(sec, key)
     else:
-        r = bbox_config.cluster.get_section_strict(sec_key)
+        r = get_sharedconfig().get_section_strict(sec_key)
     print(json_pp(r))
 
 async def set_config(sec_key, value):
     sec, key = sec_key.split('/')
     value = guess_json(value)
-    return await ClientAgent.agent.set_config(sec, key, value)
+    return await get_cluster().set_config(sec, key, value)
 
 async def del_config(sec_key):
     if '/' in sec_key:
         sec, key = sec_key.split('/')
-        return await ClientAgent.agent.del_config(sec, key)
+        return await get_cluster().del_config(sec, key)
     else:
-        return await ClientAgent.agent.del_section(sec_key)
+        return await get_cluster().del_section(sec_key)
 
 async def clear_config():
-    return await ClientAgent.agent.clear_config()
+    return await get_cluster().clear_config()
 
 async def dump_config():
-    data = bbox_config.cluster.dump_json()
+    data = get_sharedconfig().dump_json()
     print(data)
 
 async def load_config(jsonfile):
     with open(jsonfile, 'r', encoding='utf-8') as f:
         new_sections = json.load(f)
-    rem_set, add_set = bbox_config.cluster.compare_sections(new_sections)
+    rem_set, add_set = get_sharedconfig().compare_sections(new_sections)
     #print(rem_set, add_set)
     for sec, key, value in rem_set:
         print("delete", sec, key)
-        await ClientAgent.agent.del_config(sec, key)
+        await get_cluster().del_config(sec, key)
     for sec, key, value in add_set:
         value = json.loads(value)
         print("set", sec, key)
-        await ClientAgent.agent.set_config(sec, key, value)
+        await get_cluster().set_config(sec, key, value)
 
 def help(f=sys.stdout):
     print('Commands', file=f)
@@ -72,10 +71,9 @@ def help(f=sys.stdout):
     print(' load config.json  - clear configs', file=f)
 
 async def main():
-    bbox_config.parse_local()
     args = parser.parse_args()
     try:
-        await ClientAgent.connect_cluster(**bbox_config.local)
+        await get_cluster().start()
 
         if args.op == 'get':
             await get_config(*args.param)
@@ -92,10 +90,10 @@ async def main():
         else:
             help()
     finally:
-        if ClientAgent.agent:
-            ClientAgent.agent.cont = False
-            await asyncio.sleep(0.1)
-            ClientAgent.agent.close()
+        c = get_cluster()
+        c.cont = False
+        await asyncio.sleep(0.1)
+        c.close()
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()

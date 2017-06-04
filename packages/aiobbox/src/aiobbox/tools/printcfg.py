@@ -1,7 +1,7 @@
 import os, sys
 import json
 import argparse
-from aiobbox import config
+from aiobbox.cluster import get_localconfig
 
 parser = argparse.ArgumentParser(
     description='start bbox python project')
@@ -12,10 +12,9 @@ parser.add_argument(
     help='print key')
 
 def main():
-    args = parser.parse_args()    
-    config.parse_local()
+    args = parser.parse_args()
     try:
-        print(config.local[args.key])
+        print(get_localconfig()[args.key])
     except KeyError:
         # Failed to find the key
         sys.exit(1)

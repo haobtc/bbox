@@ -9,33 +9,28 @@ import aiohttp
 from collections import defaultdict
 from aiobbox.utils import json_to_str
 from aiobbox.exceptions import RegisterFailed, ETCDError
-import aiobbox.config as bbox_config
 from .etcd_client import EtcdClient
+from .cfg import SharedConfig, get_sharedconfig
 
 class ClientAgent(EtcdClient):
-    agent = None
+    def __init__(self):
+        super(ClientAgent, self).__init__()
+        self.state = 'INIT'
 
-    @classmethod
-    async def connect_cluster(cls, **local_config):
-        if cls.agent:
-            return cls.agent
-
-        cls.agent = ClientAgent(**local_config)
-        cls.agent.connect()
-
-        await cls.agent.get_boxes()
-        await cls.agent.get_configs()
-    
-        asyncio.ensure_future(cls.agent.watch_boxes())
-        asyncio.ensure_future(cls.agent.watch_configs())    
-        return cls.agent
-    
-    def __init__(self, etcd=None, prefix=None, **kw):
-        super(ClientAgent, self).__init__(etcd, prefix)
+    async def start(self):
         self.route = defaultdict(list)
         self.boxes = {}
+        
+        self.connect()
 
-    async def get_boxes(self):
+        await self.get_boxes()
+        await self.get_configs()
+    
+        asyncio.ensure_future(self.watch_boxes())
+        asyncio.ensure_future(self.watch_configs())
+        self.state = 'STARTED'
+        
+    async def get_boxes(self, chg=None):
         new_route = defaultdict(list)
         boxes = {}
         try:
@@ -60,9 +55,7 @@ class ClientAgent(EtcdClient):
         return random.choice(boxes)
 
     async def watch_boxes(self):
-        async def onchange(r):
-            return await self.get_boxes()
-        return await self.watch_changes('boxes', onchange)
+        return await self.watch_changes('boxes', self.get_boxes)
     
     # config related
     async def set_config(self, sec, key, value):
@@ -70,8 +63,9 @@ class ClientAgent(EtcdClient):
         assert '/' not in sec
         assert '/' not in key
 
+        shared_cfg = get_sharedconfig()
         etcd_key = self.path('configs/{}/{}'.format(sec, key))
-        old_value = bbox_config.cluster.get(sec, key)
+        old_value = shared_cfg.get(sec, key)
         value_json = json_to_str(value)
         if old_value:
             old_value_json = json_to_str(old_value)
@@ -80,14 +74,14 @@ class ClientAgent(EtcdClient):
         else:
             await self.write(etcd_key, value_json,
                              prevExist=False)
-        bbox_config.cluster.set(sec, key, value)        
+        shared_cfg.set(sec, key, value)        
 
     async def del_config(self, sec, key):
         assert sec and key
         assert '/' not in sec
         assert '/' not in key
         
-        bbox_config.cluster.delete(sec, key)
+        get_sharedconfig().delete(sec, key)
         etcd_key = self.path('configs/{}/{}'.format(sec, key))
         await self.delete(etcd_key)
 
@@ -95,12 +89,12 @@ class ClientAgent(EtcdClient):
         assert sec
         assert '/' not in sec
         
-        bbox_config.cluster.delete_section(sec)
+        get_sharedconfig().delete_section(sec)
         etcd_key = self.path('configs/{}'.format(sec))
         await self.delete(etcd_key, recursive=True)
         
     async def clear_config(self):
-        bbox_config.cluster.clear()
+        get_sharedconfig().clear()
         etcd_key = self.path('configs')
         try:
             await self.delete(etcd_key, recursive=True)
@@ -108,12 +102,12 @@ class ClientAgent(EtcdClient):
             logging.debug(
                 'key %s not found on delete', etcd_key)
         
-    async def get_configs(self):
+    async def get_configs(self, chg=None):
         reg = r'/(?P<prefix>[^/]+)/configs/(?P<sec>[^/]+)/(?P<key>[^/]+)'        
         try:
             r = await self.read(self.path('configs'),
                                 recursive=True)
-            new_conf = bbox_config.ClusterConfig()
+            new_conf = SharedConfig()
             for v in self.walk(r):
                 m = re.match(reg, v.key)
                 if m:
@@ -122,13 +116,17 @@ class ClientAgent(EtcdClient):
                     key = m.group('key')
                     new_conf.set(sec, key, json.loads(v.value))
                     
-            bbox_config.cluster = new_conf
+            get_sharedconfig().replace_with(new_conf)
         except etcd.EtcdKeyNotFound:
             pass
         except ETCDError:
             pass
         
     async def watch_configs(self):
-        async def onchange(r):
-            return await self.get_configs()
-        return await self.watch_changes('configs', onchange)
+        return await self.watch_changes('configs', self.get_configs)
+
+_agent = ClientAgent()
+def get_cluster():
+    return _agent
+
+    

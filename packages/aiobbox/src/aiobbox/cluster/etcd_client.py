@@ -6,34 +6,36 @@ import aio_etcd as etcd
 import aiohttp
 from collections import defaultdict
 from aiobbox.exceptions import ETCDError
-import aiobbox.config as bbox_config
+from .cfg import get_localconfig
 
 class EtcdClient:
-    def __init__(self, etcd_list, prefix):
-        assert etcd_list
-        assert prefix
-        self.etcd_list = etcd_list
-        self.prefix = prefix
+    def path(self, p):
+        cfg = get_localconfig()
+        if p.startswith('/'):
+            return '/{}{}'.format(cfg.prefix, p)
+        else:
+            return '/{}/{}'.format(cfg.prefix, p)
+        
+    @property
+    def prefix(self):
+        return get_localconfig().prefix
+
+    def connect(self):
         self.client = None
         self.client_failed = False
         self.cont = True
-
-    def path(self, p):
-        if p.startswith('/'):
-            return '/{}{}'.format(self.prefix, p)
-        else:
-            return '/{}/{}'.format(self.prefix, p)
-
-    def connect(self):
-        if len(self.etcd_list) == 1:
-            host, port = self.etcd_list[0].split(':')
+        
+        etcd_list = get_localconfig().etcd
+        if len(etcd_list) == 1:
+            host, port = etcd_list[0].split(':')
             self.client = etcd.Client(
                 host=host,
                 port=int(port),
                 allow_reconnect=True,
                 allow_redirect=True)
         else:
-            host = tuple(tuple(e.split(':')) for e in self.etcd_list)
+            host = tuple(tuple(e.split(':'))
+                         for e in etcd_list)
             self.client = etcd.Client(
                 host=host,
                 allow_reconnect=True,
@@ -96,7 +98,7 @@ class EtcdClient:
                                       wait=True)
                 await changed(chg)
             except asyncio.TimeoutError:
-                logging.debug(
+                logging.warn(
                     'timeout error during watching %s',
                     component)
             except ETCDError:

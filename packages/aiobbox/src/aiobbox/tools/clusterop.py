@@ -3,9 +3,8 @@ import json
 import asyncio
 import argparse
 import aiobbox.client as bbox_client
-import aiobbox.config as bbox_config
 from aiobbox.utils import guess_json, json_pp
-from aiobbox.cluster import ClientAgent
+from aiobbox.cluster import get_cluster, get_localconfig
 
 parser = argparse.ArgumentParser(
     description='cluster op and info')
@@ -22,17 +21,17 @@ parser.add_argument(
     help='params')
 
 async def cluster_info():
+    cfg = get_localconfig()
     info = {
-        'etcd': bbox_config.local['etcd'],
-        'prefix': bbox_config.local['prefix'],
-        'boxes': ClientAgent.agent.boxes
+        'etcd': cfg.etcd,
+        'prefix': cfg.prefix,
+        'boxes': get_cluster().boxes
         }
     print(json_pp(info))
     
 async def main():
-    bbox_config.parse_local()
     args = parser.parse_args()
-    await ClientAgent.connect_cluster(**bbox_config.local)
+    await get_cluster().start()
     try:
         if args.op == 'info':
             await cluster_info(*args.param)
@@ -40,10 +39,10 @@ async def main():
             print('unknown command {}'.format(args.op), file=sys.stderr)
             sys.exit(1)
     finally:
-        if ClientAgent.agent:
-            ClientAgent.agent.cont = False
-            await asyncio.sleep(0.1)
-            ClientAgent.agent.close()
+        c = get_cluster()
+        c.cont = False
+        await asyncio.sleep(0.1)
+        c.close()
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
