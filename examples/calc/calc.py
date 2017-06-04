@@ -1,7 +1,7 @@
 import sys
 import asyncio
 from aiobbox.server import Service
-import aiobbox.discovery as discovery
+from aiobbox.cluster import BoxAgent
 
 srv = Service('calc')
 
@@ -16,7 +16,8 @@ async def add2sleep(request, a, b, sec):
 
 @srv.method('echostr')
 async def echostr(request, msg):
-    
-    return 'echooo {} from {}'.format(
+    return 'echo {} from {} {}'.format(
         msg,
-        discovery.server_agent.bind)
+        BoxAgent.agent.bind,
+        BoxAgent.agent.boxid
+    )

@@ -7,7 +7,7 @@ from aiochannel.errors import ChannelClosed
 from urllib.parse import urljoin
 import json
 import uuid
-import aiobbox.discovery as bbox_dsc
+from aiobbox.cluster import ClientAgent
 from aiobbox.exceptions import ConnectionError
 
 try:
@@ -175,10 +175,8 @@ class FullConnectEngine:
         #self.policy = 'RANDOM'
 
     async def ensure_clients(self, srv):
-        agent = bbox_dsc.client_agent
-        assert agent
-
-        boxes = agent.route[srv]
+        assert ClientAgent.agent
+        boxes = ClientAgent.agent.route[srv]
         for box in boxes:
             if box not in self.pool:
                 # add box to pool
@@ -186,7 +184,7 @@ class FullConnectEngine:
                 self.pool[box] = client
 
         for box, client in list(self.pool.items()):
-            if box not in agent.boxes:
+            if box not in ClientAgent.agent.boxes:
                 logging.warning('remove box %s', box)
                 # remove box due to server done
                 client.close()
@@ -200,9 +198,8 @@ class FullConnectEngine:
 
     def get_client(self, srv, policy=None):
         policy = policy or self.policy
-        agent = bbox_dsc.client_agent
         clients = []
-        for box in agent.route[srv]:
+        for box in ClientAgent.agent.route[srv]:
             client = self.pool.get(box)
             if client.connected:
                 if policy == self.FIRST:
@@ -219,8 +216,6 @@ class FullConnectEngine:
         return ServiceRef(name, self)
 
     async def request(self, srv, method, *params, retry=0):
-        agent = bbox_dsc.client_agent
-        assert agent
         await self.ensure_clients(srv)
         client = self.get_client(srv)
         if not client:

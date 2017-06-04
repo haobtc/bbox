@@ -5,7 +5,7 @@ import asyncio
 import argparse
 import aiobbox.server as bbox_server
 import aiobbox.config as bbox_config
-import aiobbox.discovery as bbox_dsc
+from aiobbox.cluster import BoxAgent, ClientAgent
 
 parser = argparse.ArgumentParser(
     description='start bbox python project')
@@ -41,8 +41,8 @@ def main():
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        if bbox_dsc.server_agent:
-            loop.run_until_complete(bbox_dsc.server_agent.deregister())
+        if BoxAgent.agent:
+            loop.run_until_complete(BoxAgent.agent.deregister())
         loop.run_until_complete(handler.finish_connections())
 
 

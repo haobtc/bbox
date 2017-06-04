@@ -5,7 +5,7 @@ import asyncio
 import argparse
 import aiobbox.client as bbox_client
 import aiobbox.config as bbox_config
-import aiobbox.discovery as bbox_dsc
+from aiobbox.cluster import ClientAgent
 from aiobbox.utils import guess_json, json_pp
 
 parser = argparse.ArgumentParser(
@@ -33,17 +33,17 @@ async def get_config(sec_key):
 async def set_config(sec_key, value):
     sec, key = sec_key.split('/')
     value = guess_json(value)
-    return await bbox_dsc.client_agent.set_config(sec, key, value)
+    return await ClientAgent.agent.set_config(sec, key, value)
 
 async def del_config(sec_key):
     if '/' in sec_key:
         sec, key = sec_key.split('/')
-        return await bbox_dsc.client_agent.del_config(sec, key)
+        return await ClientAgent.agent.del_config(sec, key)
     else:
-        return await bbox_dsc.client_agent.del_section(sec_key)
+        return await ClientAgent.agent.del_section(sec_key)
 
 async def clear_config():
-    return await bbox_dsc.client_agent.clear_config()
+    return await ClientAgent.agent.clear_config()
 
 async def dump_config():
     data = bbox_config.cluster.dump_json()
@@ -56,11 +56,11 @@ async def load_config(jsonfile):
     #print(rem_set, add_set)
     for sec, key, value in rem_set:
         print("delete", sec, key)
-        await bbox_dsc.client_agent.del_config(sec, key)
+        await ClientAgent.agent.del_config(sec, key)
     for sec, key, value in add_set:
         value = json.loads(value)
         print("set", sec, key)
-        await bbox_dsc.client_agent.set_config(sec, key, value)
+        await ClientAgent.agent.set_config(sec, key, value)
 
 def help(f=sys.stdout):
     print('Commands', file=f)
@@ -75,7 +75,7 @@ async def main():
     bbox_config.parse_local()
     args = parser.parse_args()
     try:
-        await bbox_dsc.client_connect(**bbox_config.local)
+        await ClientAgent.connect_cluster(**bbox_config.local)
 
         if args.op == 'get':
             await get_config(*args.param)
@@ -92,10 +92,10 @@ async def main():
         else:
             help()
     finally:
-        if bbox_dsc.client_agent:
-            bbox_dsc.client_agent.cont = False
+        if ClientAgent.agent:
+            ClientAgent.agent.cont = False
             await asyncio.sleep(0.1)
-            bbox_dsc.client_agent.close()
+            ClientAgent.agent.close()
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()

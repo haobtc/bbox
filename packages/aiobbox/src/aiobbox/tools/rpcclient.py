@@ -5,7 +5,7 @@ import asyncio
 import argparse
 import aiobbox.client as bbox_client
 import aiobbox.config as bbox_config
-import aiobbox.discovery as bbox_dsc
+from aiobbox.cluster import ClientAgent
 from aiobbox.utils import guess_json, json_pp
 
 parser = argparse.ArgumentParser(
@@ -58,7 +58,7 @@ async def main():
         bbox_client.engine.policy = bbox_client.engine.RANDOM
 
     try:
-        await bbox_dsc.client_connect(**bbox_config.local)
+        await ClientAgent.connect_cluster(**bbox_config.local)
         for i in range(args.ntimes):
             r = await bbox_client.engine.request(
                 srv,
@@ -70,9 +70,10 @@ async def main():
                 break
             await asyncio.sleep(args.interval)
     finally:
-        if bbox_dsc.client_agent:
-            bbox_dsc.client_agent.close()
-
+        if ClientAgent.agent:
+            ClientAgent.agent.cont = False
+            await asyncio.sleep(0.1)
+            ClientAgent.agent.close()
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
