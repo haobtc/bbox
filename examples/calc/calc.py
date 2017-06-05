@@ -3,7 +3,7 @@ import asyncio
 from aiobbox.server import Service
 from aiobbox.cluster import get_box
 
-srv = Service('calc')
+srv = Service()
 
 @srv.method('add2num')
 async def add2num(request, a, b):
@@ -22,3 +22,8 @@ async def echostr(request, msg):
         curr_box.bind,
         curr_box.boxid
     )
+
+srv.register('calc')
+
+async def shutdown():
+    print('calc shutdown')

@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 import json
 import uuid
 from aiobbox.cluster import get_cluster
-from aiobbox.exceptions import ConnectionError
+from aiobbox.exceptions import ConnectionError, Retry
 
 try:
     import selectors
@@ -67,7 +67,7 @@ class WebSocketClient:
         except OSError:
             logging.warn('connect to %s failed', url)
 
-    async def request(self, srv, method, *params):
+    async def request(self, srv, method, *params, req_id=None):
         if not self.connected:
             raise ConnectionError('websocket closed')
         
@@ -75,7 +75,8 @@ class WebSocketClient:
                       '/jsonrpc/2.0/api')
 
         method = srv + '::' + method
-        req_id = uuid.uuid4().hex
+        if not req_id:
+            req_id = uuid.uuid4().hex
         payload = {
             'id': req_id,
             'method': method,
@@ -152,32 +153,39 @@ class MethodRef:
         return self
 
     async def __call__(self, *params):
-        return await self.srv_ref.engine.request(
+        return await self.srv_ref.pool.request(
             self.srv_ref.name,
             self.name,
             *params,
             **self.kw)
 
 class ServiceRef:
-    def __init__(self, srv_name, engine):
+    def __init__(self, srv_name, pool):
         self.name = srv_name
-        self.engine = engine
+        self.pool = pool
 
     def __getattr__(self, name):
         return MethodRef(name, self)
 
-class FullConnectEngine:
+class FullConnectPool:
     FIRST = 1
     RANDOM = 2
+    
     def __init__(self):
         self.pool = {}
         self.policy = self.FIRST
-        #self.policy = 'RANDOM'
+        self.max_concurrency = 10
 
     async def ensure_clients(self, srv):
+        c = self.get_client(srv, policy=self.FIRST)
+        if c:
+            return
+        
         agent = get_cluster()
         boxes = agent.route[srv]
-        for box in boxes:
+
+        # connect at most n concurrent connections
+        for box in sorted(boxes)[:self.max_concurrency]:
             if box not in self.pool:
                 # add box to pool
                 client = WebSocketClient('ws://' + box)
@@ -196,12 +204,17 @@ class FullConnectEngine:
                 return
             await asyncio.sleep(0.01)
 
-    def get_client(self, srv, policy=None):
+    def get_client(self, srv, policy=None, boxid=None):
         policy = policy or self.policy
         clients = []
-        for box in get_cluster().route[srv]:
-            client = self.pool.get(box)
-            if client.connected:
+        cc = get_cluster()
+        for bind in cc.route[srv]:
+            client = self.pool.get(bind)
+            if client and client.connected:
+                if boxid:
+                    box = cc.boxes.get(bind)
+                    if box.boxid != boxid:
+                        continue
                 if policy == self.FIRST:
                     return client
                 else:
@@ -211,27 +224,35 @@ class FullConnectEngine:
             return random.choice(clients)
         
     def __getattr__(self, name):
-        if name not in self.pool:
-            raise AttributeError
         return ServiceRef(name, self)
 
-    async def request(self, srv, method, *params, retry=0):
+    
+    async def request(self, srv, method, *params, boxid=None, retry=0, req_id=None):
+        if not req_id:
+            req_id = uuid.uuid4().hex
+        for rty in range(retry + 1):
+            try:
+                return await self._request(srv, method,
+                                           *params, boxid=None,
+                                           req_id=req_id)
+            except Retry:
+                continue
+        raise ConnectionError(
+            'cannot retry connections')
+        
+    async def _request(self, srv, method, *params, boxid=None, req_id=None):        
         await self.ensure_clients(srv)
-        client = self.get_client(srv)
+        client = self.get_client(srv, boxid=boxid)
         if not client:
             raise ConnectionError(
                 'no available rpc server')
+        
+        if not req_id:
+            req_id = uuid.uuid4().hex
         try:
-            return await client.request(srv, method, *params)
+            return await client.request(srv, method, *params, req_id=req_id)
         except ConnectionError:
             assert not client.connected
-            if retry <= 0:
-                raise ConnectionError(
-                    'cannot retry connections')
-            
-        return await self.request(srv, method,
-                                  *params,
-                                  retry=retry-1)
+            raise Retry()
     
-#engine = MasterStandbyEngine()
-engine = FullConnectEngine()
+pool = FullConnectPool()

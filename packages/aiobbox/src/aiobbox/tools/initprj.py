@@ -43,7 +43,7 @@ def main():
         'etcd': ['127.0.0.1:2379'],
         'prefix': args.prefix or uuid.uuid4().hex,
         'language': lang,
-        'port_range': [30000, 40000],
+        'port_range': [30000, 31000],
         'bind_ip': '127.0.0.1'
         }
     with open(config_file, 'w', encoding='utf-8') as f:

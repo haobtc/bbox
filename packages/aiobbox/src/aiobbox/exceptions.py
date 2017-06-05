@@ -9,3 +9,6 @@ class RegisterFailed(BaseError):
 
 class ETCDError(BaseError):
     pass
+
+class Retry(Exception):
+    pass

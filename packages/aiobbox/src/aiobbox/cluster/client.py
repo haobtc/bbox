@@ -26,8 +26,8 @@ class ClientAgent(EtcdClient):
         await self.get_boxes()
         await self.get_configs()
     
-        asyncio.ensure_future(self.watch_boxes())
-        asyncio.ensure_future(self.watch_configs())
+        asyncio.ensure_future(self._watch_boxes())
+        asyncio.ensure_future(self._watch_configs())
         self.state = 'STARTED'
         
     async def get_boxes(self, chg=None):
@@ -54,7 +54,7 @@ class ClientAgent(EtcdClient):
         boxes = self.route[srv]
         return random.choice(boxes)
 
-    async def watch_boxes(self):
+    async def _watch_boxes(self):
         return await self.watch_changes('boxes', self.get_boxes)
     
     # config related
@@ -122,7 +122,7 @@ class ClientAgent(EtcdClient):
         except ETCDError:
             pass
         
-    async def watch_configs(self):
+    async def _watch_configs(self):
         return await self.watch_changes('configs', self.get_configs)
 
 _agent = ClientAgent()

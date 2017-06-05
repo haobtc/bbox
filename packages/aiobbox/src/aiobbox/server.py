@@ -12,9 +12,10 @@ DEBUG = True
 srv_dict = {}
 
 class Service(object):
-    def __init__(self, srv_name):
-        self.srv_name = srv_name
-        self.methods = {}
+    def __init__(self):
+        self.methods = {}        
+
+    def register(self, srv_name):
         if srv_name in srv_dict:
             logging.warn('srv {} already exist'.format(srv_name))
         srv_dict[srv_name] = self
@@ -129,9 +130,6 @@ async def http_server(boxid, loop=None):
     if loop is None:
         loop = asyncio.get_event_loop()
 
-    # client etcd agent
-    await get_cluster().start()
-    
     # server etcd agent
     srv_names = list(srv_dict.keys())
     curr_box = get_box()
@@ -143,8 +141,9 @@ async def http_server(boxid, loop=None):
     app.router.add_get('/', index)
 
     host, port = curr_box.bind.split(':')
-    logging.info('box registered as {}'.format(curr_box.bind))
-    print('box registered as {}'.format(curr_box.bind))    
+    logging.warn('box {} launched as {}'.format(
+        curr_box.boxid,
+        curr_box.bind))
     handler = app.make_handler()
     srv = await loop.create_server(handler, host, port)
     return srv, handler

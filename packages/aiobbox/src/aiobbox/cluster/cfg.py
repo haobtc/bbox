@@ -69,6 +69,8 @@ class SharedConfig:
         section = self.sections.get(sec)
         if section:
             return section.get(key, default)
+        else:
+            return default
 
     def get_strict(self, sec, key):
         return self.sections[sec][key]

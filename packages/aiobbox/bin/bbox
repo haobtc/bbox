@@ -10,6 +10,7 @@ function help() {
     echo 'commands'
     echo ' init                      - init a bbox project'
     echo ' start modspec [modspec]   - start rpc server'
+    echo ' run modspec [modspec]     - run tasks'
     echo ' rpc srv::method arg [arg]  - trigger rpc request'
     echo ' config set sec/key value  - set shared config'
     echo ' config get <sec/key|sec>  - print shared config by key or section'
@@ -28,6 +29,16 @@ case "$1" in
         lang=`$PY3 -m aiobbox.tools.printcfg language`
         if [ $lang == 'python3' ]; then
             exec $PY3 -m aiobbox.tools.startbox "${@:2}"
+        else
+            # TODO: support nodejs
+            echo language $lang not supported
+            exit 1
+        fi
+        ;;
+    run)
+        lang=`$PY3 -m aiobbox.tools.printcfg language`
+        if [ $lang == 'python3' ]; then
+            exec $PY3 -m aiobbox.tools.runtask "${@:2}"
         else
             # TODO: support nodejs
             echo language $lang not supported

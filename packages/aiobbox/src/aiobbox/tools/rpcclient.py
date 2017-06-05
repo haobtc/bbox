@@ -53,12 +53,12 @@ async def main():
     ps = [guess_json(p) for p in args.param]
 
     if args.dispatch_policy == 'random':
-        bbox_client.engine.policy = bbox_client.engine.RANDOM
+        bbox_client.pool.policy = bbox_client.pool.RANDOM
 
     try:
         await get_cluster().start()
         for i in range(args.ntimes):
-            r = await bbox_client.engine.request(
+            r = await bbox_client.pool.request(
                 srv,
                 method,
                 *ps,

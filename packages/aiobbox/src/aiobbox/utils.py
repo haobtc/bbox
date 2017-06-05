@@ -19,3 +19,11 @@ def json_pp(v):
 
 def json_to_str(v):
     return json.dumps(v, sort_keys=True)    
+
+def import_module(spec):
+    mod = __import__(spec)
+    for sec in spec.split('.')[1:]:
+        mod = getattr(mod, sec)
+    return mod
+
+        

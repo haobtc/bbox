@@ -93,17 +93,20 @@ class EtcdClient:
         while self.cont:
             logging.debug('watching %s', component)
             try:
-                chg = await self.read(self.path(component),
-                                      recursive=True,
-                                      wait=True)
+                chg = await asyncio.wait_for(
+                    self.read(self.path(component),
+                              recursive=True,
+                              wait=True),
+                    timeout=60)
                 await changed(chg)
             except asyncio.TimeoutError:
                 logging.warn(
                     'timeout error during watching %s',
                     component)
             except ETCDError:
-                logging.debug('etcd error, sleep for a while')
+                logging.warn('etcd error, sleep for a while')
                 await asyncio.sleep(1)
-            except Exception as e:
-                print('xxxx', e)
-                raise
+            await changed(None)
+
+            
+            
