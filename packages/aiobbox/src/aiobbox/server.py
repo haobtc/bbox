@@ -1,4 +1,5 @@
 import re
+import time
 import logging
 import os, json
 import asyncio
@@ -7,9 +8,9 @@ from aiohttp import web
 from functools import wraps
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.exceptions import ServiceError
+from aiobbox import stats
 
 DEBUG = True
-
 srv_dict = {}
 
 class Service(object):
@@ -39,7 +40,9 @@ class Request:
         self.srv = None
         
     async def handle(self):
+        stats_name = None
         try:
+            start_time = time.time()
             self.req_id = self.body.get('id')
             if (not isinstance(self.req_id, str) or
                 self.req_id is None):
@@ -71,11 +74,15 @@ class Request:
                 raise ServiceError(
                     'method not found',
                     'Method {} does not exist'.format(self.method))
-
+            stats_name = '/{}/{}'.format(srv_name, self.method)
+            stats.rpc_request_count[stats_name] += 1
             res = await fn(self, *self.params)
             resp = {'result': res,
                     'id': self.req_id,
                     'error': None}
+            end_time = time.time()
+            if end_time - start_time > 1.0:
+                stats.slow_rpc_request_count[stats_name] += 1
         except ServiceError as e:
             error_info = {
                 'message': getattr(e, 'message', str(e)),
@@ -87,6 +94,8 @@ class Request:
         except Exception as e:
             import traceback
             traceback.print_exc()
+            if stats_name:
+                stats.error_rpc_request_count[stats_name] += 1
             error_info = {
                 'message': getattr(e, 'message', str(e)),
                 }
@@ -124,6 +133,23 @@ async def handle_ws(request):
 async def index(request):
     return web.Response(text='hello')
 
+async def handle_metrics(request):
+    lines = []
+    boxid = get_box().boxid
+    for svc, cnt in stats.rpc_request_count.items():
+        lines.append(
+            'rpc_request_count{{boxid="{}",endpoint="{}"}} {}'
+            .format(boxid, svc, cnt))
+    for svc, cnt in stats.slow_rpc_request_count.items():
+        lines.append(
+            'slow_rpc_request_count{{boxid="{}",endpoint="{}"}} {}'
+            .format(boxid, svc, cnt))
+    for svc, cnt in stats.error_rpc_request_count.items():
+        lines.append(
+            'error_rpc_request_count{{boxid="{}",endpoint="{}"}} {}'
+            .format(boxid, svc, cnt))
+    return web.Response(text='\n'.join(lines))
+
 async def http_server(boxid, loop=None):
     if loop is None:
         loop = asyncio.get_event_loop()
@@ -136,6 +162,7 @@ async def http_server(boxid, loop=None):
     app = web.Application()
     app.router.add_post('/jsonrpc/2.0/api', handle)
     app.router.add_route('*', '/jsonrpc/2.0/ws', handle_ws)
+    app.router.add_get('/metrics', handle_metrics)
     app.router.add_get('/', index)
 
     host, port = curr_box.bind.split(':')

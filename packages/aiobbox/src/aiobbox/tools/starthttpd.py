@@ -33,10 +33,7 @@ parser.add_argument(
 httpd_mod = None
 async def main():
     global httpd_mod
-    cfg = get_ticket()
-    if cfg.language != 'python3':
-        print('language must be python3', file=sys.stderr)
-        sys.exit(1)
+
     args = parser.parse_args()
     if not args.boxid:
         args.boxid = uuid.uuid4().hex

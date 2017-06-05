@@ -39,6 +39,9 @@ case "$1" in
     httpd)
         exec $PY3 -m aiobbox.tools.starthttpd "${@:2}"
         ;;
+    metrics)
+        exec $PY3 -m aiobbox.tools.startmetrics "${@:2}"
+        ;;
     run)
         lang=`$PY3 -m aiobbox.tools.printcfg language`
         if [ $lang == 'python3' ]; then

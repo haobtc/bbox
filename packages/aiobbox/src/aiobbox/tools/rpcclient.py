@@ -57,6 +57,7 @@ async def main():
 
     try:
         await get_cluster().start()
+        
         for i in range(args.ntimes):
             r = await bbox_client.pool.request(
                 srv,
