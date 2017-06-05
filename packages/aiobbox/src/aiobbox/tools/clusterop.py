@@ -4,7 +4,7 @@ import asyncio
 import argparse
 import aiobbox.client as bbox_client
 from aiobbox.utils import guess_json, json_pp
-from aiobbox.cluster import get_cluster, get_localconfig
+from aiobbox.cluster import get_cluster, get_ticket
 
 parser = argparse.ArgumentParser(
     description='cluster op and info')
@@ -21,7 +21,7 @@ parser.add_argument(
     help='params')
 
 async def cluster_info():
-    cfg = get_localconfig()
+    cfg = get_ticket()
     info = {
         'etcd': cfg.etcd,
         'prefix': cfg.prefix,

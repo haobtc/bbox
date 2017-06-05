@@ -6,11 +6,11 @@ import aio_etcd as etcd
 import aiohttp
 from collections import defaultdict
 from aiobbox.exceptions import ETCDError
-from .cfg import get_localconfig
+from .ticket import get_ticket
 
 class EtcdClient:
     def path(self, p):
-        cfg = get_localconfig()
+        cfg = get_ticket()
         if p.startswith('/'):
             return '/{}{}'.format(cfg.prefix, p)
         else:
@@ -18,14 +18,14 @@ class EtcdClient:
         
     @property
     def prefix(self):
-        return get_localconfig().prefix
+        return get_ticket().prefix
 
     def connect(self):
         self.client = None
         self.client_failed = False
         self.cont = True
         
-        etcd_list = get_localconfig().etcd
+        etcd_list = get_ticket().etcd
         if len(etcd_list) == 1:
             host, port = etcd_list[0].split(':')
             self.client = etcd.Client(
@@ -93,6 +93,8 @@ class EtcdClient:
         while self.cont:
             logging.debug('watching %s', component)
             try:
+                # watch every 1 min to
+                # avoid timeout exception
                 chg = await asyncio.wait_for(
                     self.read(self.path(component),
                               recursive=True,
@@ -100,7 +102,7 @@ class EtcdClient:
                     timeout=60)
                 await changed(chg)
             except asyncio.TimeoutError:
-                logging.warn(
+                logging.debug(
                     'timeout error during watching %s',
                     component)
             except ETCDError:

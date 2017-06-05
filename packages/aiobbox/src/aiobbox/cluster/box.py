@@ -8,7 +8,7 @@ import aio_etcd as etcd
 from aiobbox.utils import json_to_str
 from aiobbox.exceptions import RegisterFailed, ETCDError
 from .etcd_client import EtcdClient
-from .cfg import get_localconfig
+from .ticket import get_ticket
 
 BOX_TTL = 10
     
@@ -36,7 +36,7 @@ class BoxAgent(EtcdClient):
             'services': self.srv_names})
 
     async def register(self, retry=100):
-        cfg = get_localconfig()
+        cfg = get_ticket()
         for _ in range(retry + 1):
             if self.bind:
                 return

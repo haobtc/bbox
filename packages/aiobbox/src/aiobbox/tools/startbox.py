@@ -5,7 +5,7 @@ import asyncio
 import argparse
 import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster
-from aiobbox.cluster import get_localconfig
+from aiobbox.cluster import get_ticket
 from aiobbox.utils import import_module
 
 parser = argparse.ArgumentParser(
@@ -25,7 +25,7 @@ parser.add_argument(
     help='box id')
 
 async def main():
-    cfg = get_localconfig()
+    cfg = get_ticket()
     if cfg.language != 'python3':
         print('language must be python3', file=sys.stderr)
         sys.exit(1)

@@ -26,7 +26,7 @@ case "$1" in
         exec $PY3 -m aiobbox.tools.initprj "${@:2}"
         ;;
     start)
-        lang=`$PY3 -m aiobbox.tools.printcfg language`
+        lang=`$PY3 -m aiobbox.tools.printticket language`
         if [ $lang == 'python3' ]; then
             exec $PY3 -m aiobbox.tools.startbox "${@:2}"
         else

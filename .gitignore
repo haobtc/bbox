@@ -99,4 +99,4 @@ ENV/
 .mypy_cache/
 .localenv
 default.etcd/
-bbox.config.json
+bbox.ticket.json

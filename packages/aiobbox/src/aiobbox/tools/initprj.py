@@ -20,7 +20,7 @@ def main():
     args = parser.parse_args()
 
 
-    config_file = os.path.join(os.getcwd(), 'bbox.config.json')
+    config_file = os.path.join(os.getcwd(), 'bbox.ticket.json')
     
     if os.path.exists(config_file):
         print('project already initialized!',

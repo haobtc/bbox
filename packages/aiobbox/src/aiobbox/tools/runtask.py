@@ -5,7 +5,7 @@ import json
 import asyncio
 import argparse
 import aiobbox.server as bbox_server
-from aiobbox.cluster import get_box, get_cluster, get_localconfig
+from aiobbox.cluster import get_box, get_cluster, get_ticket
 from aiobbox.utils import import_module
 
 parser = argparse.ArgumentParser(
@@ -24,7 +24,7 @@ async def run_mod(mod):
     return await runfn()
     
 async def main():
-    cfg = get_localconfig()
+    cfg = get_ticket()
     if cfg.language != 'python3':
         print('language must be python3', file=sys.stderr)
         sys.exit(1)
@@ -47,4 +47,8 @@ async def main():
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    try:
+        loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        pass
+        

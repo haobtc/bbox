@@ -6,46 +6,6 @@ import logging
 import sys
 from aiobbox.utils import json_pp, json_to_str
 
-class LocalConfig:
-    def __init__(self):
-        self.data = {}
-        
-    def load(self, config_path=None):
-        if config_path is None:
-            config_path = os.path.join(
-                os.getcwd(),
-                'bbox.config.json')
-            
-        self.data['loadtime'] = int(time.time())            
-        if os.path.exists(config_path):
-            with open(config_path, 'r', encoding='utf-8') as f:
-                kw = json.load(f)
-                self.update(**kw)
-
-    def update(self, **kw):
-        self.data.update(kw)
-        self.validate()
-        
-    def validate(self):
-        assert self.port_range[0] < self.port_range[1]
-        assert not not self.prefix
-        assert re.match(r'[0-9a-zA-Z\_\.\-\+]+$', self.prefix)
-
-    def keys(self):
-        return self.data.keys()
-
-    def __getitem__(self, key):
-        return self.data[key]
-
-    def __getattr__(self, key):
-        return self.data[key]
-
-_local = LocalConfig()
-def get_localconfig():
-    if not _local.data:
-        _local.load()
-    return _local
-
 class SharedConfig:
     def __init__(self):
         self.sections = {}
