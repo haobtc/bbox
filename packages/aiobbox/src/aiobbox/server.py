@@ -133,7 +133,7 @@ async def http_server(boxid, loop=None):
     await get_cluster().start()
     
     # server etcd agent
-    srv_namess = list(srv_dict.keys())
+    srv_names = list(srv_dict.keys())
     curr_box = get_box()
     await curr_box.start(boxid, srv_names)
     
