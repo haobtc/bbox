@@ -8,6 +8,8 @@ def guess_json(p):
         p = int(p)
     elif p.startswith('{') or p.startswith('['):
         p = json.loads(p)
+    elif p.startswith('"'):
+        p = json.loads(p)
     elif re.match(r'-?\d+$', p):
         p = int(p)
     elif re.match(r'-?\d*(\.\d+)?$', p):

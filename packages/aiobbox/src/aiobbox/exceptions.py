@@ -12,3 +12,9 @@ class ETCDError(BaseError):
 
 class Retry(Exception):
     pass
+
+class ServiceError(Exception):
+    def __init__(self, code, msg=None):
+        self.code = code
+        super(ServiceError, self).__init__(msg or code)
+

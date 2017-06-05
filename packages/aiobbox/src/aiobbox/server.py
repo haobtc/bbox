@@ -6,6 +6,7 @@ import json
 from aiohttp import web
 from functools import wraps
 from aiobbox.cluster import get_box, get_cluster
+from aiobbox.exceptions import ServiceError
 
 DEBUG = True
 
@@ -29,10 +30,6 @@ class Service(object):
             return __w
         return decorator
 
-class BboxError(Exception):
-    def __init__(self, code, msg=None):
-        self.code = code
-        super(BboxError, self).__init__(msg or code)
 
 class Request:
     def __init__(self, body):
@@ -46,39 +43,40 @@ class Request:
             self.req_id = self.body.get('id')
             if (not isinstance(self.req_id, str) or
                 self.req_id is None):
-                raise BboxError('invalpid reqid',
-                               '{}'.format(self.req_id))
+                raise ServiceError('invalpid reqid',
+                                   '{}'.format(self.req_id))
             
             self.params = self.body.get('params', [])
 
             method = self.body['method']
             if not isinstance(method, str):
-                raise BboxError('invalid method',
-                               'method should be string')
+                raise ServiceError('invalid method',
+                                   'method should be string')
             
             m = re.match(r'(\w[\.\w]*)::(\w+)$', method)
             if not m:
-                raise BboxError('invalid method',
-                               'Method should be ID::ID')
+                raise ServiceError('invalid method',
+                                   'Method should be ID::ID')
 
             srv_name = m.group(1)
             self.method = m.group(2)
             self.srv = srv_dict.get(srv_name)
             if not self.srv:
-                raise BboxError(
+                raise ServiceError(
                     'service not found',
                     'server {} not found'.format(srv_name))
             try:
                 fn = self.srv.methods[self.method]
             except KeyError:
-                raise BboxError('method not found',
-                               'Method {} does not exist'.format(self.method))
+                raise ServiceError(
+                    'method not found',
+                    'Method {} does not exist'.format(self.method))
 
             res = await fn(self, *self.params)
             resp = {'result': res,
                     'id': self.req_id,
                     'error': None}
-        except BboxError as e:
+        except ServiceError as e:
             error_info = {
                 'message': getattr(e, 'message', str(e)),
                 'code': e.code

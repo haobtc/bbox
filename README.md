@@ -1,3 +1,3 @@
-# TUP
+# Bbox
 
-New multi-lang, json-based RPC framework
+New multi-lang, json-rpc based micro services framework
