@@ -5,7 +5,7 @@ import asyncio
 import argparse
 import aiobbox.client as bbox_client
 from aiobbox.cluster import get_cluster
-from aiobbox.utils import guess_json, json_pp
+from aiobbox.utils import guess_json, json_pp, json_to_str
 
 parser = argparse.ArgumentParser(
     description='test an rpc interface')
@@ -64,7 +64,7 @@ async def main():
                 method,
                 *ps,
                 retry=args.retry)
-            print(json_pp(r))
+            print(json_to_str(r))
             if i >= args.ntimes - 1:
                 break
             await asyncio.sleep(args.interval)

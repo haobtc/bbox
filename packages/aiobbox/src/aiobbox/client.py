@@ -177,9 +177,9 @@ class FullConnectPool:
         self.max_concurrency = 10
 
     async def ensure_clients(self, srv):
-        c = self.get_client(srv, policy=self.FIRST)
-        if c:
-            return
+        #c = self.get_client(srv, policy=self.FIRST)
+        #if c:
+        #    return
         
         agent = get_cluster()
         boxes = agent.route[srv]

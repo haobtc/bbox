@@ -21,9 +21,11 @@ parser.add_argument(
     help='the box service module to load')
 
 async def get_box_metrics(bind, session):
-    print('get', bind)
-    resp = await session.get('http://' + bind + '/metrics')
-    print(resp)
+    try:
+        resp = await session.get('http://' + bind + '/metrics')
+    except aiohttp.ClientConnectionError:
+        logging.error('client connection error')
+        return []
     return await resp.text()
     
 async def handle_metrics(request):
@@ -40,7 +42,8 @@ async def handle_metrics(request):
         '# HELP rpc_request_count total number of rpc request since box start',
         '# TYPE rpc_request_count counter'
         ]
-    return web.Response(text='\n'.join(header + res))
+    headers = {'Content-Type': 'text/plain'}
+    return web.Response(text='\n'.join(header + res), headers=headers)
 
 async def http_server(bind='127.0.0.1:28081'):
     app = web.Application()

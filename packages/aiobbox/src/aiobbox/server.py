@@ -138,15 +138,15 @@ async def handle_metrics(request):
     boxid = get_box().boxid
     for svc, cnt in stats.rpc_request_count.items():
         lines.append(
-            'rpc_request_count{{boxid="{}",endpoint="{}"}} {}'
+            'rpc_request_count{{boxid="{}", endpoint="{}"}} {}'
             .format(boxid, svc, cnt))
     for svc, cnt in stats.slow_rpc_request_count.items():
         lines.append(
-            'slow_rpc_request_count{{boxid="{}",endpoint="{}"}} {}'
+            'slow_rpc_request_count{{boxid="{}", endpoint="{}"}} {}'
             .format(boxid, svc, cnt))
     for svc, cnt in stats.error_rpc_request_count.items():
         lines.append(
-            'error_rpc_request_count{{boxid="{}",endpoint="{}"}} {}'
+            'error_rpc_request_count{{boxid="{}", endpoint="{}"}} {}'
             .format(boxid, svc, cnt))
     return web.Response(text='\n'.join(lines))
 
