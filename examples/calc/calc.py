@@ -30,14 +30,25 @@ async def echostr(request, msg):
 
 @srv.method('web')
 async def web(request, webreq):
-    #raise ServiceError('400', 'bad')
+    def getval(d, key):
+        a = d.get(key)
+        if a:
+            return a[0]
+        
     path = webreq['path']
     r = urlparse.parse_qs(webreq.get('qs', ''))
-    body = '{} {}'.format(path, r)
+    a = getval(r, 'a')
+    b = getval(r, 'b')
+    if a and a.isdigit() and b and b.isdigit():
+        res = int(a) + int(b)
+    else:
+        raise ServiceError('400', 'Bad argument')
     return {
         'headers': {'X-Move': 'dont move'},
-        'body': {'aa': 1}
-        }
+        'body': {'path': path,
+                 'qs': r,
+                 'headers': webreq['headers'],
+                 'res': res}}
 
 srv.register('calc')
 

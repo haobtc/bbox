@@ -10,7 +10,7 @@ from aiobbox.exceptions import RegisterFailed, ETCDError
 from .etcd_client import EtcdClient
 from .ticket import get_ticket
 
-BOX_TTL = 10
+BOX_TTL = 30
     
 class BoxAgent(EtcdClient):
     def __init__(self):
@@ -64,6 +64,7 @@ class BoxAgent(EtcdClient):
             'no port alloced after retry {} times'.format(retry))
 
     async def deregister(self):
+        self.cont = False
         if not self.bind or not self.client:
             return
         key = self.path('boxes/{}'.format(self.bind))
@@ -74,18 +75,24 @@ class BoxAgent(EtcdClient):
 
     async def update(self):
         while self.cont:
-            await asyncio.sleep(3)            
+            await asyncio.sleep(3)
+            if not self.cont:
+                break
             if not self.client or not self.bind:
                 logging.debug('etcd client or bind are empty')
             else:
                 key = self.path('boxes/{}'.format(self.bind))
-                value = self.box_info()
                 try:
-                    await self.write(key, value, ttl=BOX_TTL)
+                    await self.refresh(key, ttl=BOX_TTL)
                 except etcd.EtcdKeyNotFound:
                     logging.warn('etcd key not found %s', key)
+                    value = self.box_info()
+                    try:
+                        await self.write(key, value, ttl=BOX_TTL)
+                    except ETCDError:
+                        logging.warn('etc error on write')
                 except ETCDError:
-                    logging.debug('etcd error on refresh')
+                    logging.warn('etcd error on refresh')
 
 _agent = BoxAgent()
 def get_box():

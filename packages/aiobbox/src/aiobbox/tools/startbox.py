@@ -36,32 +36,32 @@ async def main():
     # start cluster client
     await get_cluster().start()
 
-    shutdown_handlers = []
-    start_handlers = []
+    shutdown_callbacks = []
+    start_callbacks = []
     for modspec in args.module:
         mod = import_module(modspec)
 
         start = getattr(mod, 'start', None)
         if start:
-            start_handlers.append(start)
+            start_callbacks.append(start)
 
         shutdown = getattr(mod, 'shutdown', None)
         if shutdown:
-            shutdown_handlers.append(shutdown)
+            shutdown_callbacks.append(shutdown)
 
     src, handler = await bbox_server.http_server(args.boxid)
 
-    for start in start_handlers:
+    for start in start_callbacks:
         await start()
-    return handler, shutdown_handlers
+    return handler, shutdown_callbacks
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-    handler, shutdown_handlers = loop.run_until_complete(main())
+    handler, shutdown_callbacks = loop.run_until_complete(main())
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        for shutdown in shutdown_handlers:
+        for shutdown in shutdown_callbacks:
             loop.run_until_complete(
                 asyncio.wait_for(
                     shutdown(),

@@ -20,17 +20,19 @@ class ClientAgent(EtcdClient):
     async def start(self):
         self.route = defaultdict(list)
         self.boxes = {}
-        
+
         self.connect()
 
         await self.get_boxes()
         await self.get_configs()
-    
+
         asyncio.ensure_future(self._watch_boxes())
         asyncio.ensure_future(self._watch_configs())
         self.state = 'STARTED'
-        
+
     async def get_boxes(self, chg=None):
+        if chg:
+            logging.debug('get boxes on change', chg)
         new_route = defaultdict(list)
         boxes = {}
         try:
@@ -49,14 +51,14 @@ class ClientAgent(EtcdClient):
             pass
         self.route = new_route
         self.boxes = boxes
-        
+
     def get_box(self, srv):
         boxes = self.route[srv]
         return random.choice(boxes)
 
     async def _watch_boxes(self):
         return await self.watch_changes('boxes', self.get_boxes)
-    
+
     # config related
     async def set_config(self, sec, key, value):
         assert sec and key
@@ -74,13 +76,13 @@ class ClientAgent(EtcdClient):
         else:
             await self.write(etcd_key, value_json,
                              prevExist=False)
-        shared_cfg.set(sec, key, value)        
+        shared_cfg.set(sec, key, value)
 
     async def del_config(self, sec, key):
         assert sec and key
         assert '/' not in sec
         assert '/' not in key
-        
+
         get_sharedconfig().delete(sec, key)
         etcd_key = self.path('configs/{}/{}'.format(sec, key))
         await self.delete(etcd_key)
@@ -88,11 +90,11 @@ class ClientAgent(EtcdClient):
     async def del_section(self, sec):
         assert sec
         assert '/' not in sec
-        
+
         get_sharedconfig().delete_section(sec)
         etcd_key = self.path('configs/{}'.format(sec))
         await self.delete(etcd_key, recursive=True)
-        
+
     async def clear_config(self):
         get_sharedconfig().clear()
         etcd_key = self.path('configs')
@@ -101,9 +103,9 @@ class ClientAgent(EtcdClient):
         except etcd.EtcdKeyNotFound:
             logging.debug(
                 'key %s not found on delete', etcd_key)
-        
+
     async def get_configs(self, chg=None):
-        reg = r'/(?P<prefix>[^/]+)/configs/(?P<sec>[^/]+)/(?P<key>[^/]+)'        
+        reg = r'/(?P<prefix>[^/]+)/configs/(?P<sec>[^/]+)/(?P<key>[^/]+)'
         try:
             r = await self.read(self.path('configs'),
                                 recursive=True)
@@ -115,18 +117,16 @@ class ClientAgent(EtcdClient):
                     sec = m.group('sec')
                     key = m.group('key')
                     new_conf.set(sec, key, json.loads(v.value))
-                    
+
             get_sharedconfig().replace_with(new_conf)
         except etcd.EtcdKeyNotFound:
             pass
         except ETCDError:
             pass
-        
+
     async def _watch_configs(self):
         return await self.watch_changes('configs', self.get_configs)
 
 _agent = ClientAgent()
 def get_cluster():
     return _agent
-
-    

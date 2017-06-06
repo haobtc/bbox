@@ -1,21 +1,22 @@
 import sys
+import os
 import logging
 import asyncio
 from aiohttp import web
 from aiobbox.server import Service, ServiceError
 from aiobbox.client import pool
+from aiobbox.exceptions import ConnectionError
 
 # service
 srv = Service()
 @srv.method('wsdata')
 def wsdata(request, data):
     pass
-srv.register('httpd')
-
+srv.register('gateway')
 
 # webserver
-http_handler = None
 async def handle_req(request):
+    http_handler = os.getenv('RPC_BACKEND')
     if not http_handler:
         return web.HTTPNotFound()
     webreq = {
@@ -23,6 +24,7 @@ async def handle_req(request):
         'path': request.path,
         'qs': request.query_string,
         'headers': dict(request.headers.items()),
+        'body': None
         }
 
     if request.method in ('POST', 'PUT'):
@@ -35,7 +37,10 @@ async def handle_req(request):
             webreq['body'] = dict(body.items())
 
     srv, method = http_handler.split('::')
-    r = await pool.request(srv, method, webreq)
+    try:
+        r = await pool.request(srv, method, webreq)
+    except ConnectionError:
+        return web.HTTPBadGateway()
     if r['result']:
         res = r['result']
         if isinstance(res, str):
@@ -51,32 +56,25 @@ async def handle_req(request):
         else:
             return web.json_response(res)
     else:
-        code = int(r['error'].get('code', 500))
+        code = r['error'].get('code', '500')
+        if code.isdigit():
+            code = int(code)
+        else:
+            code = 500
         return web.Response(status=code,
                             body=r['error'].get('message', ''))
 
 async def all_middleware(app, handler):
     return handle_req
             
-app_handler = None
-async def http_server(handler=None, bind='127.0.0.1:28080'):
-    global http_handler
-    http_handler = handler
-    app = web.Application(middlewares=[all_middleware])
-    #resource = app.router.add_resource(r'/(.*)')
-    #resource.add_route('*', handle_req)
-
-    handler = app.make_handler()
-    host, port = bind.split(':')
-    logging.warn('httpd starts at %s', bind)
-    loop = asyncio.get_event_loop()
-    srv = await loop.create_server(handler, host, port)
-    app_handler = handler
 
 async def start(handler=None, bind='127.0.0.1'):
-    return await http_server(handler=handler, bind=bind)
+    pass
 
 async def shutdown():
-    if app_handler:
-        await app_handler.finish_connections()
+    pass
 
+async def get_app(bind='127.0.0.1:28080'):
+    app = web.Application(middlewares=[all_middleware])
+    return app
+        

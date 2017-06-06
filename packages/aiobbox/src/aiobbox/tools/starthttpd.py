@@ -1,4 +1,5 @@
 import os, sys
+import logging
 import uuid
 import json
 import asyncio
@@ -13,9 +14,9 @@ parser = argparse.ArgumentParser(
     description='start bbox python project')
 
 parser.add_argument(
-    'handler',
+    'module',
     type=str,
-    help='service::method to handle http request')
+    help='python module to custom apps')
 
 parser.add_argument(
     '--bind',
@@ -38,22 +39,33 @@ async def main():
     if not args.boxid:
         args.boxid = uuid.uuid4().hex
 
-    # start cluster client
+    # start cluster client and box
     await get_cluster().start()
-    src, handler = await bbox_server.http_server(args.boxid)
+    _, handler = await bbox_server.http_server(args.boxid)
     
-    httpd_mod = import_module('aiobbox.services.httpd')
-    await httpd_mod.start(handler=args.handler,
-                          bind=args.bind)
-    return handler
+    httpd_mod = import_module(args.module)
+    http_app = await httpd_mod.get_app(bind=args.bind)
+    
+    http_handler = http_app.make_handler()
+    
+    host, port = args.bind.split(':')
+    logging.warn('httpd starts at %s', args.bind)
+    loop = asyncio.get_event_loop()
+    await loop.create_server(http_handler, host, port)
+
+    if hasattr(httpd_mod, 'start'):
+        await httpd_mod.start()
+        
+    return handler, httpd_mod, http_handler
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-    handler = loop.run_until_complete(main())
+    handler, httpd_mod, http_handler = loop.run_until_complete(main())
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        if httpd_mod:
-            httpd_mod.shutdown()
+        if hasattr(httpd_mod, 'shutdown'):
+            loop.run_until_complete(httpd_mod.shutdown())
         loop.run_until_complete(get_box().deregister())
         loop.run_until_complete(handler.finish_connections())
+        loop.run_until_complete(http_handler.finish_connections())        

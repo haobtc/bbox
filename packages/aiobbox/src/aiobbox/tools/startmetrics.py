@@ -3,7 +3,7 @@ import logging
 import uuid
 import json
 import asyncio
-from aiohttp import web, ClientSession
+from aiohttp import web, ClientSession, ClientConnectionError
 import argparse
 import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster
@@ -23,7 +23,7 @@ parser.add_argument(
 async def get_box_metrics(bind, session):
     try:
         resp = await session.get('http://' + bind + '/metrics')
-    except aiohttp.ClientConnectionError:
+    except ClientConnectionError:
         logging.error('client connection error')
         return []
     return await resp.text()

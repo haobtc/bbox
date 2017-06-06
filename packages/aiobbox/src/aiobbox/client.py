@@ -36,7 +36,7 @@ class HttpClient:
 
 class WebSocketClient:
     def __init__(self, url_prefix='ws://localhost:8080'):
-        self.session = aiohttp.ClientSession()        
+        self.session = aiohttp.ClientSession()
         self.url_prefix = url_prefix
         self.waiters = {}
         self.ws = None
@@ -59,7 +59,7 @@ class WebSocketClient:
             logging.debug('connect to %s already connected',
                           self.url_prefix)
             return
-        
+
         url = self.url_prefix + '/jsonrpc/2.0/ws'
         try:
             ws = await self.session.ws_connect(url, autoclose=False, autoping=False, heartbeat=1.0)
@@ -70,7 +70,7 @@ class WebSocketClient:
     async def request(self, srv, method, *params, req_id=None):
         if not self.connected:
             raise ConnectionError('websocket closed')
-        
+
         url = urljoin(self.url_prefix,
                       '/jsonrpc/2.0/api')
 
@@ -97,7 +97,7 @@ class WebSocketClient:
             channel.close()
 
     async def onclosed(self):
-        self.ws = None        
+        self.ws = None
         for req_id, channel in self.waiters.items():
             channel.close()
         self.session.close()
@@ -110,7 +110,7 @@ class WebSocketClient:
             if not self.ws:
                 await asyncio.sleep(1.0)
                 continue
-            msg = await self.ws.receive()            
+            msg = await self.ws.receive()
             if msg.type == aiohttp.WSMsgType.TEXT:
                 data = json.loads(msg.data)
             elif msg.type == aiohttp.WSMsgType.BINARY:
@@ -170,19 +170,27 @@ class ServiceRef:
 class FullConnectPool:
     FIRST = 1
     RANDOM = 2
-    
+
     def __init__(self):
         self.pool = {}
         self.policy = self.FIRST
         self.max_concurrency = 10
 
     async def ensure_clients(self, srv):
+        agent = get_cluster()        
+        boxes = agent.route[srv]        
         #c = self.get_client(srv, policy=self.FIRST)
         #if c:
         #    return
-        
-        agent = get_cluster()
-        boxes = agent.route[srv]
+        # cnt = self.get_client_count(srv)
+        # agent = get_cluster()
+        # if cnt > self.max_concurrency:
+        #     return
+        # else:
+        #     # dont import more active connections
+        #     boxes = agent.route[srv]
+        #     if cnt >= len(boxes) - 1:
+        #         return
 
         # connect at most n concurrent connections
         for box in sorted(boxes)[:self.max_concurrency]:
@@ -204,6 +212,15 @@ class FullConnectPool:
                 return
             await asyncio.sleep(0.01)
 
+    def get_client_count(self, srv):
+        cc = get_cluster()
+        cnt = 0
+        for bind in cc.route[srv]:
+            client = self.pool.get(bind)
+            if client and client.connected:
+                cnt += 1
+        return cnt
+
     def get_client(self, srv, policy=None, boxid=None):
         policy = policy or self.policy
         clients = []
@@ -222,11 +239,11 @@ class FullConnectPool:
                     clients.append(client)
         if clients:
             return random.choice(clients)
-        
+
     def __getattr__(self, name):
         return ServiceRef(name, self)
 
-    
+
     async def request(self, srv, method, *params, boxid=None, retry=0, req_id=None):
         if not req_id:
             req_id = uuid.uuid4().hex
@@ -239,14 +256,14 @@ class FullConnectPool:
                 continue
         raise ConnectionError(
             'cannot retry connections')
-        
-    async def _request(self, srv, method, *params, boxid=None, req_id=None):        
+
+    async def _request(self, srv, method, *params, boxid=None, req_id=None):
         await self.ensure_clients(srv)
         client = self.get_client(srv, boxid=boxid)
         if not client:
             raise ConnectionError(
                 'no available rpc server')
-        
+
         if not req_id:
             req_id = uuid.uuid4().hex
         try:
@@ -254,5 +271,5 @@ class FullConnectPool:
         except ConnectionError:
             assert not client.connected
             raise Retry()
-    
+
 pool = FullConnectPool()
