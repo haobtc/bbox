@@ -8,11 +8,11 @@ function help() {
     echo "usage: bbox <command> [args] [options]"
     echo 'commands'
     echo ' init                      - init a bbox project'
-    echo ' start <modspec> [modspec]   - start rpc server'
-    echo ' httpd <modspec>             - start httpd to handler'
+    echo ' start <modspec> [modspec] - start rpc server'
+    echo ' httpd <modspec>           - start httpd to handler'
     echo ' metrics                   - prometheus metrics url'    
-    echo ' run <modspec> [modspec]     - run tasks'
-    echo ' rpc srv::method arg [arg] - trigger rpc request'
+    echo ' run <modspec> [modspec]   - run tasks'
+    echo ' rpc <srv::method> <arg> [arg] - trigger rpc request'
     echo ' config set <sec/key> <value>  - set shared config'
     echo ' config get <sec/key|sec>  - print shared config by key or section'
     echo ' config del <sec/key|sec>  - delete given config key'
@@ -20,18 +20,19 @@ function help() {
     echo ' config dump|list          - dump all shared config'
     echo ' config load <config.json> - load config from json file'
     echo ' cluster info              - print boxes in the cluster'
-    echo ' genkey <prefix>                  - generate self-signed pkey and certs'
+    echo ' genkey <prefix>           - generate self-signed pkey and certs'
 }
 
 function genkey() {
+    # refer to https://devcenter.heroku.com/articles/ssl-certificate-self
     prefix=$1
     if [ -z $prefix ]; then
         echo 'you must provide a key prefix, ie. server' >&2
         exit 1
     fi
 
-    mkdir -p cert
-    cd cert
+    mkdir -p certs
+    cd certs
 
     echo generating privkey
     openssl genrsa -des3 -passout pass:x -out $prefix.pass.key 2048
@@ -39,10 +40,11 @@ function genkey() {
     rm $prefix.pass.key
     openssl req -new -key $prefix.key -out $prefix.csr
 
-    echo 'generating cert file'
-    openssl x509 -req -sha256 -days 365 -in $prefix.csr -signkey $prefix.key -out $prefix.crt
+    # sign for 3 years
+    openssl x509 -req -sha256 -days 1095 -in $prefix.csr -signkey $prefix.key -out $prefix.crt
 
     cd ..
+    echo keys generated to ./certs/
 }
 
 case "$1" in

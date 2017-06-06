@@ -27,6 +27,7 @@ class Ticket:
                     kw = json.load(f)
                     self.update(**kw)
                     self.update(loadtime=int(time.time()))
+                    break
 
     def update(self, **kw):
         self.data.update(kw)
