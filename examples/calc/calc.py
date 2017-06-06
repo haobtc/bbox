@@ -4,9 +4,7 @@ import urllib.parse as urlparse
 from aiobbox.server import Service, ServiceError
 from aiobbox.cluster import get_box
 
-
 srv = Service()
-
 @srv.method('add2num')
 async def add2num(request, a, b):
     return a + b

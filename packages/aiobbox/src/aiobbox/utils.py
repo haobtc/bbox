@@ -28,4 +28,20 @@ def import_module(spec):
         mod = getattr(mod, sec)
     return mod
 
-        
+def parse_method(method):
+    return re.match(r'(?P<srv>\w[\.\w]*)::(?P<method>\w+)$',
+                    method)
+
+def parse_int(v):
+    assert isinstance(v, (int, long))
+    return v
+
+def parse_float(v):
+    assert isinstance(v, (int, float, long))
+    return v
+
+def parse_str(v):
+    assert isinstance(v, str)
+
+def assert_type(v, t):
+    assert isinstance(v, t)

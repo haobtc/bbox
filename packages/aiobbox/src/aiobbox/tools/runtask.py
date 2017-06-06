@@ -9,6 +9,7 @@ from aiobbox.cluster import get_box, get_cluster, get_ticket
 from aiobbox.utils import import_module
 
 parser = argparse.ArgumentParser(
+    prog='bbox run',
     description='run bbox tasks')
 
 parser.add_argument(

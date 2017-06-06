@@ -7,6 +7,7 @@ from aiobbox.utils import guess_json, json_pp
 from aiobbox.cluster import get_cluster, get_ticket
 
 parser = argparse.ArgumentParser(
+    prog='bbox cluster',
     description='cluster op and info')
 
 parser.add_argument(

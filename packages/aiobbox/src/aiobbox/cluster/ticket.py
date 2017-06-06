@@ -10,16 +10,23 @@ class Ticket:
         self.data = {}
         
     def load(self, config_path=None):
-        if config_path is None:
-            config_path = os.path.join(
-                os.getcwd(),
-                'bbox.ticket.json')
-            
-        self.data['loadtime'] = int(time.time())            
-        if os.path.exists(config_path):
-            with open(config_path, 'r', encoding='utf-8') as f:
-                kw = json.load(f)
-                self.update(**kw)
+        config_path_list = []
+        if config_path is not None:
+            config_path_list.append(config_path)
+        
+        config_path_list.append(os.path.join(
+            os.getcwd(),
+            'bbox.ticket.json'))
+        config_path_list.append(os.path.join(
+            os.getenv('HOME'),
+            '.bbox.ticket.json'))
+        
+        for path in config_path_list:
+            if os.path.exists(path):
+                with open(path, 'r', encoding='utf-8') as f:
+                    kw = json.load(f)
+                    self.update(**kw)
+                    self.update(loadtime=int(time.time()))
 
     def update(self, **kw):
         self.data.update(kw)

@@ -8,10 +8,16 @@ from aiohttp import web
 from functools import wraps
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.exceptions import ServiceError
+from aiobbox.utils import parse_method
 from aiobbox import stats
 
 DEBUG = True
 srv_dict = {}
+
+class MethodRef:
+    def __init__(self, fn, private=False):
+        self.fn = fn
+        self.private = private
 
 class Service(object):
     def __init__(self):
@@ -22,12 +28,12 @@ class Service(object):
             logging.warn('srv {} already exist'.format(srv_name))
         srv_dict[srv_name] = self
 
-    def method(self, name):
+    def method(self, name, private=False):
         def decorator(fn):
             __w = wraps(fn)(fn)
             if name in self.methods:
                 logging.warn('method {} already exist'.format(name))
-            self.methods[name] = __w
+            self.methods[name] = MethodRef(__w, private=private)
             return __w
         return decorator
 
@@ -56,7 +62,7 @@ class Request:
                 raise ServiceError('invalid method',
                                    'method should be string')
             
-            m = re.match(r'(?P<srv>\w[\.\w]*)::(?P<method>\w+)$', method)
+            m = parse_method(method)
             if not m:
                 raise ServiceError('invalid method',
                                    'Method should be ID::ID')
@@ -69,14 +75,14 @@ class Request:
                     'service not found',
                     'server {} not found'.format(srv_name))
             try:
-                fn = self.srv.methods[self.method]
+                method_ref = self.srv.methods[self.method]
             except KeyError:
                 raise ServiceError(
                     'method not found',
                     'Method {} does not exist'.format(self.method))
             stats_name = '/{}/{}'.format(srv_name, self.method)
             stats.rpc_request_count[stats_name] += 1
-            res = await fn(self, *self.params)
+            res = await method_ref.fn(self, *self.params)
             resp = {'result': res,
                     'id': self.req_id,
                     'error': None}

@@ -8,6 +8,7 @@ from aiobbox.cluster import get_cluster
 from aiobbox.utils import guess_json, json_pp, json_to_str
 
 parser = argparse.ArgumentParser(
+    prog='bbox rpc',
     description='test an rpc interface')
 
 parser.add_argument(

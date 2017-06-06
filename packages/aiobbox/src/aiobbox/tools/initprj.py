@@ -4,6 +4,7 @@ import json
 import argparse
 
 parser = argparse.ArgumentParser(
+    prog='bbox init',
     description='init a bbox project')
 parser.add_argument(
     '--language',

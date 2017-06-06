@@ -5,6 +5,7 @@ import logging
 import asyncio
 from aiohttp import web
 
+from aiobbox.utils import parse_method
 from aiobbox.client import pool
 from aiobbox.exceptions import ConnectionError
 
@@ -15,8 +16,7 @@ async def handle_rpc(request):
         or not isinstance(body['method'], str)):
         return web.HTTPBadRequest()
     
-    m = re.match(r'(?P<srv>\w[\.\w]*)::(?P<method>\w+)$',
-                 body['method'])
+    m = parse_method(body['method'])
     if not m:
         return web.HTTPBadRequest()
     
@@ -24,7 +24,9 @@ async def handle_rpc(request):
     srv, method = m.group('srv'), m.group('method')
     params = body['params']
     try:
-        r = await pool.request(srv, method, *params, req_id=body.get('id'))
+        r = await pool.request(srv, method,
+                               *params,
+                               req_id=body.get('id'))
     except ConnectionError:
         return web.HTTPBadGateway()
     return web.json_response(r)

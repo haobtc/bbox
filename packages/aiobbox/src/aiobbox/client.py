@@ -243,7 +243,6 @@ class FullConnectPool:
     def __getattr__(self, name):
         return ServiceRef(name, self)
 
-
     async def request(self, srv, method, *params, boxid=None, retry=0, req_id=None):
         if not req_id:
             req_id = uuid.uuid4().hex
