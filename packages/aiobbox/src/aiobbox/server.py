@@ -56,13 +56,13 @@ class Request:
                 raise ServiceError('invalid method',
                                    'method should be string')
             
-            m = re.match(r'(\w[\.\w]*)::(\w+)$', method)
+            m = re.match(r'(?P<srv>\w[\.\w]*)::(?P<method>\w+)$', method)
             if not m:
                 raise ServiceError('invalid method',
                                    'Method should be ID::ID')
 
-            srv_name = m.group(1)
-            self.method = m.group(2)
+            srv_name = m.group('srv')
+            self.method = m.group('method')
             self.srv = srv_dict.get(srv_name)
             if not self.srv:
                 raise ServiceError(
