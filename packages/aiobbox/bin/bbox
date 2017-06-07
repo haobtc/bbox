@@ -88,6 +88,9 @@ case "$1" in
     cluster)
         exec $PY3 -m aiobbox.tools.clusterop "${@:2}"
         ;;
+    lock)
+        exec $PY3 -m aiobbox.tools.watchlock "${@:2}"
+        ;;
     genkey)
         genkey $2
         ;;

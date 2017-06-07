@@ -100,4 +100,4 @@ ENV/
 .localenv
 default.etcd/
 bbox.ticket.json
-cert
+certs/
