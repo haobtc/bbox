@@ -27,7 +27,7 @@ async def get_box_metrics(bind, session):
         logging.error('client connection error')
         return []
     return await resp.text()
-    
+
 async def handle_metrics(request):
     c = get_cluster()
 
@@ -39,16 +39,27 @@ async def handle_metrics(request):
         else:
             res = []
     header = [
-        '# HELP rpc_request_count total number of rpc request since box start',
-        '# TYPE rpc_request_count counter'
+        '# HELP rpc_requests number of rpc requests',
+        '# TYPE rpc_requests gauge',
+
+        '# HELP rpc_request_total total number of rpc requests',
+        '# TYPE rpc_request_total gauge',
+
+        '# HELP slow_rpc_requests  number of slow rpc requests',
+        '# TYPE slow_rpc_requests gauge',
+
+        '# HELP error_rpc_requests number of error rpc requests',
+        '# TYPE error_rpc_requests gauge',
+        '',
         ]
     headers = {'Content-Type': 'text/plain'}
-    return web.Response(text='\n'.join(header + res), headers=headers)
+    return web.Response(text='\n'.join(header + res + ['']),
+                        headers=headers)
 
 async def http_server(bind='127.0.0.1:28081'):
     app = web.Application()
     app.router.add_get('/metrics', handle_metrics)
-    app.router.add_get('/', handle_metrics)    
+    app.router.add_get('/', handle_metrics)
 
     handler = app.make_handler()
     host, port = bind.split(':')
@@ -63,7 +74,7 @@ async def main():
 
     # start cluster client
     await get_cluster().start()
-        
+
     handler = await http_server(bind=args.bind)
     return handler
 

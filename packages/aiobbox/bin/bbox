@@ -7,7 +7,7 @@ function help() {
     echo "bbox - bixin's micro services framework"
     echo "usage: bbox <command> [args] [options]"
     echo 'commands'
-    echo ' init                      - init a bbox project'
+    echo ' init                      - generate ticket.json'
     echo ' start <modspec> [modspec] - start rpc server'
     echo ' httpd <modspec>           - start httpd and load module'
     echo ' metrics                   - prometheus metrics url'    
@@ -16,6 +16,7 @@ function help() {
     echo ' config <op> <arg> [arg]   - config operations'
     echo ' cluster info              - print boxes in the cluster'
     echo ' genkey <prefix>           - generate self-signed pkey and certs'
+    echo ' lock <name> [command]     - exec command after acquiring lock '
 }
 
 function genkey() {

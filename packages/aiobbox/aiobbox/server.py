@@ -21,7 +21,7 @@ class MethodRef:
 
 class Service(object):
     def __init__(self):
-        self.methods = {}        
+        self.methods = {}
 
     def register(self, srv_name):
         if srv_name in srv_dict:
@@ -44,7 +44,7 @@ class Request:
         self.req_id = None
         self.params = None
         self.srv = None
-        
+
     async def handle(self):
         stats_name = None
         try:
@@ -54,14 +54,14 @@ class Request:
                 self.req_id is None):
                 raise ServiceError('invalpid reqid',
                                    '{}'.format(self.req_id))
-            
+
             self.params = self.body.get('params', [])
 
             method = self.body['method']
             if not isinstance(method, str):
                 raise ServiceError('invalid method',
                                    'method should be string')
-            
+
             m = parse_method(method)
             if not m:
                 raise ServiceError('invalid method',
@@ -120,7 +120,7 @@ class Request:
         if resp:
             ws.send_json(resp)
         return resp
-        
+
 async def handle(request):
     body = await request.json()
     req = Request(body)
@@ -130,7 +130,7 @@ async def handle(request):
 async def handle_ws(request):
     ws = web.WebSocketResponse(autoping=True)
     await ws.prepare(request)
-    
+
     async for req_msg in ws:
         body = json.loads(req_msg.data)
         req = Request(body)
@@ -142,18 +142,31 @@ async def index(request):
 async def handle_metrics(request):
     lines = []
     boxid = get_box().boxid
+    sum_cnt = 0
     for svc, cnt in stats.rpc_request_count.items():
         lines.append(
-            'rpc_request_count{{boxid="{}", endpoint="{}"}} {}'
+            'rpc_requests{{boxid="{}", endpoint="{}"}} {}'
             .format(boxid, svc, cnt))
+        sum_cnt += cnt
+
+    lines.append(
+        'rpc_request_total{{boxid="{}"}} {}'
+        .format(boxid, sum_cnt))
+
     for svc, cnt in stats.slow_rpc_request_count.items():
         lines.append(
-            'slow_rpc_request_count{{boxid="{}", endpoint="{}"}} {}'
+            'slow_rpc_requests{{boxid="{}", endpoint="{}"}} {}'
             .format(boxid, svc, cnt))
+
     for svc, cnt in stats.error_rpc_request_count.items():
         lines.append(
-            'error_rpc_request_count{{boxid="{}", endpoint="{}"}} {}'
+            'error_rpc_requests{{boxid="{}", endpoint="{}"}} {}'
             .format(boxid, svc, cnt))
+        sum_cnt += cnt
+
+    stats.rpc_request_count.clear()
+    stats.slow_rpc_request_count.clear()
+    stats.error_rpc_request_count.clear()
     return web.Response(text='\n'.join(lines))
 
 async def http_server(boxid, loop=None):
@@ -164,7 +177,7 @@ async def http_server(boxid, loop=None):
     srv_names = list(srv_dict.keys())
     curr_box = get_box()
     await curr_box.start(boxid, srv_names)
-    
+
     app = web.Application()
     app.router.add_post('/jsonrpc/2.0/api', handle)
     app.router.add_route('*', '/jsonrpc/2.0/ws', handle_ws)
