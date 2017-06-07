@@ -1,4 +1,4 @@
-from distutils.core import sebbox
+from distutils.core import setup
 
 setup(name='aiobbox',
       version='0.0.1',
@@ -6,7 +6,7 @@ setup(name='aiobbox',
       author='Zeng Ke',
       author_email='zk@bixin.com',
       packages=['aiobbox'],
-      package_dir={'aiobbox': 'src/aiobbox'},
+      package_dir={'aiobbox': 'aiobbox'},
       scripts=['bin/bbox'],
       install_requires=[
           'aiohttp',
