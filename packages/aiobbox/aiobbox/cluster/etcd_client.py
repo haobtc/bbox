@@ -3,6 +3,7 @@ import re
 import random
 import asyncio
 import aio_etcd as etcd
+from aio_etcd.lock import Lock
 import aiohttp
 from collections import defaultdict
 from aiobbox.exceptions import ETCDError
@@ -109,6 +110,4 @@ class EtcdClient:
                 logging.warn('etcd error, sleep for a while')
                 await asyncio.sleep(1)
             await changed(None)
-
-            
             

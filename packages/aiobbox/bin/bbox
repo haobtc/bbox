@@ -4,21 +4,16 @@ export PYTHONDONTWRITEBYTECODE=1
 export PY3=`which python3`
 
 function help() {
-    echo "bbox - bixin's micro service and rpc framework"
+    echo "bbox - bixin's micro services framework"
     echo "usage: bbox <command> [args] [options]"
     echo 'commands'
     echo ' init                      - init a bbox project'
     echo ' start <modspec> [modspec] - start rpc server'
-    echo ' httpd <modspec>           - start httpd to handler'
+    echo ' httpd <modspec>           - start httpd and load module'
     echo ' metrics                   - prometheus metrics url'    
     echo ' run <modspec> [modspec]   - run tasks'
     echo ' rpc <srv::method> <arg> [arg] - trigger rpc request'
-    echo ' config set <sec/key> <value>  - set shared config'
-    echo ' config get <sec/key|sec>  - print shared config by key or section'
-    echo ' config del <sec/key|sec>  - delete given config key'
-    echo ' config clear              - clear all shared config'
-    echo ' config dump|list          - dump all shared config'
-    echo ' config load <config.json> - load config from json file'
+    echo ' config <op> <arg> [arg]   - config operations'
     echo ' cluster info              - print boxes in the cluster'
     echo ' genkey <prefix>           - generate self-signed pkey and certs'
 }
@@ -40,8 +35,7 @@ function genkey() {
     rm $prefix.pass.key
     openssl req -new -key $prefix.key -out $prefix.csr
 
-    # sign for 3 years
-    openssl x509 -req -sha256 -days 1095 -in $prefix.csr -signkey $prefix.key -out $prefix.crt
+    openssl x509 -req -sha256 -days 365 -in $prefix.csr -signkey $prefix.key -out $prefix.crt
 
     cd ..
     echo keys generated to ./certs/

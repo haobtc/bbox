@@ -7,21 +7,10 @@ from aiobbox.utils import guess_json, json_pp
 from aiobbox.cluster import get_cluster, get_ticket
 
 parser = argparse.ArgumentParser(
-    prog='bbox cluster',
-    description='cluster op and info')
+    prog='bbox cluster')
 
-parser.add_argument(
-    'op',
-    type=str,
-    help='cluster op')
 
-parser.add_argument(
-    'param',
-    type=str,
-    nargs='*',
-    help='params')
-
-async def cluster_info():
+async def cluster_info(args):
     cfg = get_ticket()
     info = {
         'etcd': cfg.etcd,
@@ -29,16 +18,17 @@ async def cluster_info():
         'boxes': get_cluster().boxes
         }
     print(json_pp(info))
+
+subp = parser.add_subparsers()
+p = subp.add_parser('info')
+p.add_argument('--tic', type=str)
+p.set_defaults(func=cluster_info)
     
 async def main():
     args = parser.parse_args()
     await get_cluster().start()
     try:
-        if args.op == 'info':
-            await cluster_info(*args.param)
-        else:
-            print('unknown command {}'.format(args.op), file=sys.stderr)
-            sys.exit(1)
+        await args.func(args)
     finally:
         c = get_cluster()
         c.cont = False

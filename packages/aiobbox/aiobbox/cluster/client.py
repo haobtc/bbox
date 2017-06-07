@@ -118,7 +118,12 @@ class ClientAgent(EtcdClient):
                     key = m.group('key')
                     new_conf.set(sec, key, json.loads(v.value))
 
-            get_sharedconfig().replace_with(new_conf)
+            curr_conf = get_sharedconfig()
+            delete_set, add_set = curr_conf.compare_sections(
+                new_conf.sections)
+            if delete_set or add_set:
+                curr_conf.replace_with(new_conf)
+
         except etcd.EtcdKeyNotFound:
             pass
         except ETCDError:

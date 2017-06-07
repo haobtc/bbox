@@ -82,18 +82,18 @@ class SharedConfig:
                 value = json_to_str(value)
                 vset.add((sec, key, value))
 
-        rem_set = vset - new_vset
-        add_set = new_vset - vset
+        will_delete = vset - new_vset
+        will_add = new_vset - vset
 
         new_2set = set((sec, key)
                        for (sec, key, value)
-                       in add_set)
+                       in will_add)
 
-        rem_set = set((sec, key, value)
+        will_delete = set((sec, key, value)
                       for (sec, key, value)
-                      in rem_set
+                      in will_delete
                       if (sec, key) not in new_2set)
-        return rem_set, add_set
+        return will_delete, will_add
 
 _shared = SharedConfig()
 def get_sharedconfig():
