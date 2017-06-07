@@ -34,8 +34,6 @@ class Ticket:
         self.validate()
         
     def validate(self):
-        assert self.port_range[0] < self.port_range[1]
-        assert not not self.prefix
         assert re.match(r'[0-9a-zA-Z\_\.\-\+]+$', self.prefix)
 
     def keys(self):

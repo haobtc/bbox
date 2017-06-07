@@ -9,14 +9,15 @@ from aiobbox.utils import json_to_str
 from aiobbox.exceptions import RegisterFailed, ETCDError
 from .etcd_client import EtcdClient
 from .ticket import get_ticket
+from .cfg import get_sharedconfig
 
 BOX_TTL = 30
-    
+
 class BoxAgent(EtcdClient):
     def __init__(self):
         super(BoxAgent, self).__init__()
         self.started = False
-    
+
     async def start(self, boxid, srv_names):
         assert not self.started
         assert boxid
@@ -35,12 +36,26 @@ class BoxAgent(EtcdClient):
             'boxid': self.boxid,
             'services': self.srv_names})
 
+    def get_box_config(self, key, default=None):
+        config = get_sharedconfig()
+        return config.get_chain(
+            ['box.{}'.format(self.boxid),
+             'box.default'],
+            key,
+            default=default)
+
     async def register(self, retry=100):
         cfg = get_ticket()
         for _ in range(retry + 1):
             if self.bind:
                 return
-            port = random.randrange(*cfg.port_range)
+
+            port_range = self.get_box_config(
+                'port_range',
+                default=[30000, 31000])
+
+            assert port_range[0] < port_range[1]
+            port = random.randrange(*port_range)
             bind = '{}:{}'.format(cfg.bind_ip,
                                   port)
 

@@ -32,6 +32,13 @@ class SharedConfig:
         else:
             return default
 
+    def get_chain(self, secs, key, default=None):
+        for sec in secs:
+            v = self.get(sec, key)
+            if v:
+                return v
+        return default
+
     def get_strict(self, sec, key):
         return self.sections[sec][key]
 
