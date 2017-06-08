@@ -1,5 +1,6 @@
 import os, sys
 import re
+import shlex
 import json
 import asyncio
 import argparse
@@ -29,11 +30,11 @@ async def main():
         async with c.acquire_lock(args.entry) as lock:
             if lock.is_acquired and rest_args:
                 proc = await asyncio.create_subprocess_shell(
-                    ' '.join(rest_args))
+                    ' '.join(shlex.quote(a)
+                             for a in rest_args))
                 await proc.communicate()
             else:
                 await asyncio.sleep(0.1)
-                
     finally:
         pass
     return True

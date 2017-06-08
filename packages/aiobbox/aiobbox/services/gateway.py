@@ -15,9 +15,9 @@ def wsdata(request, data):
 srv.register('gateway')
 
 # webserver
+default_backend = None
 async def handle_req(request):
-    http_handler = os.getenv('RPC_BACKEND')
-    if not http_handler:
+    if not default_backend:
         return web.HTTPNotFound()
     webreq = {
         'method': request.method,
@@ -36,7 +36,7 @@ async def handle_req(request):
             body = await request.post()
             webreq['body'] = dict(body.items())
 
-    srv, method = http_handler.split('::')
+    srv, method = default_backend.split('::')
     try:
         r = await pool.request(srv, method, webreq)
     except ConnectionError:
@@ -66,10 +66,19 @@ async def handle_req(request):
 
 async def all_middleware(app, handler):
     return handle_req
-            
 
-async def start(handler=None, bind='127.0.0.1'):
-    pass
+parser = argparse.ArgumentParser(
+    description='http gateway')
+parser.add_argument(
+    '--backend',
+    type=str,
+    default=''
+    help='srv::method as the backend')
+
+async def start(**kw):
+    global default_backend
+    args, _ = parser.parse_known_args()
+    default_backend = args.backend
 
 async def shutdown():
     pass

@@ -30,12 +30,11 @@ parser.add_argument(
     default='',
     help='box id')
 
-
 httpd_mod = None
 async def main():
     global httpd_mod
 
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     if not args.boxid:
         args.boxid = uuid.uuid4().hex
 
