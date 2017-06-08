@@ -1,4 +1,5 @@
 import re
+import os
 import json
 
 def guess_json(p):
@@ -43,3 +44,9 @@ def parse_str(v):
 
 def assert_type(v, t):
     assert isinstance(v, t)
+
+def abs_path(path):
+    return os.path.join(os.getcwd(), path)
+
+def home_path(path):
+    return os.path.join(os.getenv('HOME'), path)

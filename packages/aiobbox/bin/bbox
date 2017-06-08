@@ -57,7 +57,7 @@ case "$1" in
         fi
         ;;
     httpd)
-        lang=`$PY3 -m aiobbox.tools.printcfg language`
+        lang=`$PY3 -m aiobbox.tools.printticket language`
         if [ $lang == 'python3' ]; then
             exec $PY3 -m aiobbox.tools.starthttpd "${@:2}"
         else
@@ -71,7 +71,7 @@ case "$1" in
         exec $PY3 -m aiobbox.tools.startmetrics "${@:2}"
         ;;
     run)
-        lang=`$PY3 -m aiobbox.tools.printcfg language`
+        lang=`$PY3 -m aiobbox.tools.printticket language`
         if [ $lang == 'python3' ]; then
             exec $PY3 -m aiobbox.tools.runtask "${@:2}"
         else

@@ -1,4 +1,5 @@
 import os, sys
+import ssl
 import logging
 import uuid
 import json
@@ -8,7 +9,7 @@ import argparse
 import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.cluster import get_ticket
-from aiobbox.utils import import_module
+from aiobbox.utils import import_module, abs_path
 
 parser = argparse.ArgumentParser(
     prog='bbox metrics',
@@ -19,6 +20,12 @@ parser.add_argument(
     type=str,
     default='127.0.0.1:28081',
     help='the box service module to load')
+
+parser.add_argument(
+    '--ssl',
+    type=str,
+    default='',
+    help='ssl prefix, the files certs/$prefix.crt and certs/$prefix.key must exist if specified')
 
 async def get_box_metrics(bind, session):
     try:
@@ -56,7 +63,7 @@ async def handle_metrics(request):
     return web.Response(text='\n'.join(header + res + ['']),
                         headers=headers)
 
-async def http_server(bind='127.0.0.1:28081'):
+async def http_server(bind='127.0.0.1:28081', ssl=None):
     app = web.Application()
     app.router.add_get('/metrics', handle_metrics)
     app.router.add_get('/', handle_metrics)
@@ -65,17 +72,30 @@ async def http_server(bind='127.0.0.1:28081'):
     host, port = bind.split(':')
     logging.warn('metrics starts at %s', bind)
     loop = asyncio.get_event_loop()
-    srv = await loop.create_server(handler, host, port)
+    srv = await loop.create_server(handler,
+                                   host,
+                                   port, ssl=ssl)
     return handler
 
 httpd_mod = None
 async def main():
     args = parser.parse_args()
+    ssl_context = None
+    if args.ssl:
+        ssl_cert = abs_path(
+            'certs/{}.crt'.format(args.ssl))
+        ssl_key = abs_path(
+            'certs/{}.key'.format(args.ssl))
+        ssl_context = ssl.create_default_context(
+            ssl.Purpose.CLIENT_AUTH)
+        ssl_context.load_cert_chain(
+            ssl_cert, ssl_key)
 
     # start cluster client
     await get_cluster().start()
 
-    handler = await http_server(bind=args.bind)
+    handler = await http_server(bind=args.bind,
+                                ssl=ssl_context)
     return handler
 
 if __name__ == '__main__':

@@ -1,9 +1,9 @@
-import os
-import re
+import re, os
 import time
 import json
 import logging
 import sys
+from aiobbox.utils import abs_path, home_path
 
 class Ticket:
     def __init__(self):
@@ -14,11 +14,9 @@ class Ticket:
         if config_path is not None:
             config_path_list.append(config_path)
         
-        config_path_list.append(os.path.join(
-            os.getcwd(),
+        config_path_list.append(abs_path(
             'bbox.ticket.json'))
-        config_path_list.append(os.path.join(
-            os.getenv('HOME'),
+        config_path_list.append(home_path(
             '.bbox.ticket.json'))
         
         for path in config_path_list:
