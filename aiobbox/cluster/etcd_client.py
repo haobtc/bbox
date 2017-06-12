@@ -58,7 +58,7 @@ class EtcdClient:
             logging.warn('http client error', exc_info=True)
             self.client_failed = True
             raise ETCDError
-        except (etcd.EtcdException, etcd.EtcdConnectionFailed):
+        except etcd.EtcdConnectionFailed:
             #import traceback
             #traceback.print_exc()
             logging.warn('connection failed')

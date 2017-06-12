@@ -57,7 +57,9 @@ class ClientAgent(EtcdClient):
         return random.choice(boxes)
 
     async def _watch_boxes(self):
-        return await self.watch_changes('boxes', self.get_boxes)
+        return await self.watch_changes(
+            'boxes',
+            self.get_boxes)
 
     # config related
     async def set_config(self, sec, key, value):

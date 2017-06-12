@@ -50,3 +50,9 @@ def abs_path(path):
 
 def home_path(path):
     return os.path.join(os.getenv('HOME'), path)
+
+def force_str(v, encoding='utf-8'):
+    if type(v) == bytes:
+        return v.decode(encoding)
+    else:
+        return str(v)
