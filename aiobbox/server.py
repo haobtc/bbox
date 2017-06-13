@@ -9,6 +9,7 @@ from functools import wraps
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.exceptions import ServiceError
 from aiobbox.utils import parse_method
+from aiobbox.metrics import collect_metrics
 from aiobbox import stats
 
 DEBUG = True
@@ -81,14 +82,14 @@ class Request:
                     'method not found',
                     'Method {} does not exist'.format(self.method))
             stats_name = '/{}/{}'.format(srv_name, self.method)
-            stats.rpc_request_count[stats_name] += 1
+            stats.rpc_request_count.incr(stats_name)
             res = await method_ref.fn(self, *self.params)
             resp = {'result': res,
                     'id': self.req_id,
                     'error': None}
             end_time = time.time()
             if end_time - start_time > 1.0:
-                stats.slow_rpc_request_count[stats_name] += 1
+                stats.slow_rpc_request_count.incr(stats_name)
         except ServiceError as e:
             error_info = {
                 'message': getattr(e, 'message', str(e)),
@@ -101,7 +102,7 @@ class Request:
             import traceback
             traceback.print_exc()
             if stats_name:
-                stats.error_rpc_request_count[stats_name] += 1
+                stats.error_rpc_request_count.incr(stats_name)
             error_info = {
                 'message': getattr(e, 'message', str(e)),
                 }
@@ -139,34 +140,27 @@ async def handle_ws(request):
 async def index(request):
     return web.Response(text='hello')
 
+async def handle_metrics_json(request):
+    resp = await collect_metrics()
+    box = get_box()
+    for name, labels, v in resp['lines']:
+        labels['box'] = box.boxid
+    return web.json_response(resp)
+
 async def handle_metrics(request):
+    resp = await collect_metrics()
     lines = []
-    boxid = get_box().boxid
-    sum_cnt = 0
-    for svc, cnt in stats.rpc_request_count.items():
-        lines.append(
-            'rpc_requests{{boxid="{}", endpoint="{}"}} {}'
-            .format(boxid, svc, cnt))
-        sum_cnt += cnt
 
-    lines.append(
-        'rpc_request_total{{boxid="{}"}} {}'
-        .format(boxid, sum_cnt))
-
-    for svc, cnt in stats.slow_rpc_request_count.items():
-        lines.append(
-            'slow_rpc_requests{{boxid="{}", endpoint="{}"}} {}'
-            .format(boxid, svc, cnt))
-
-    for svc, cnt in stats.error_rpc_request_count.items():
-        lines.append(
-            'error_rpc_requests{{boxid="{}", endpoint="{}"}} {}'
-            .format(boxid, svc, cnt))
-        sum_cnt += cnt
-
-    stats.rpc_request_count.clear()
-    stats.slow_rpc_request_count.clear()
-    stats.error_rpc_request_count.clear()
+    for name, define in resp['meta'].items():
+        lines.append('# HELP {} {}'.format(
+            name, define['help']))
+        lines.append('# TYPE {} {}'.format(
+            name, define['type']))
+    for name, labels, v in resp['lines']:
+        d = ', '.join('{}="{}"'.format(lname, lvalue)
+                      for lname, lvalue in labels.items())
+        d = '{' + d + '}'
+        lines.append('{} {} {}'.format(name, d, v))
     return web.Response(text='\n'.join(lines))
 
 async def http_server(boxid, loop=None):
@@ -182,6 +176,7 @@ async def http_server(boxid, loop=None):
     app.router.add_post('/jsonrpc/2.0/api', handle)
     app.router.add_route('*', '/jsonrpc/2.0/ws', handle_ws)
     app.router.add_get('/metrics', handle_metrics)
+    app.router.add_get('/metrics.json', handle_metrics_json)
     app.router.add_get('/', index)
 
     host, port = curr_box.bind.split(':')

@@ -10,6 +10,7 @@ import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.cluster import get_ticket
 from aiobbox.utils import import_module, abs_path
+from aiobbox.metrics import collect_cluster_metrics
 
 parser = argparse.ArgumentParser(
     prog='bbox metrics',
@@ -29,11 +30,11 @@ parser.add_argument(
 
 async def get_box_metrics(bind, session):
     try:
-        resp = await session.get('http://' + bind + '/metrics')
+        resp = await session.get('http://' + bind + '/metrics.json')
     except ClientConnectionError:
         logging.error('client connection error')
         return []
-    return await resp.text()
+    return await resp.json()
 
 async def handle_metrics(request):
     c = get_cluster()
@@ -45,22 +46,30 @@ async def handle_metrics(request):
             res = await asyncio.gather(*fns)
         else:
             res = []
-    header = [
-        '# HELP rpc_requests number of rpc requests',
-        '# TYPE rpc_requests gauge',
+            
+    res.append(collect_cluster_metrics())
 
-        '# HELP rpc_request_total total number of rpc requests',
-        '# TYPE rpc_request_total gauge',
+    meta = {}
+    lines = []
+    meta_lines = []
+    for resp in res:
+        meta.update(resp['meta'])
+        
+        for name, labels, v in resp['lines']:
+            d = ', '.join('{}="{}"'.format(lname, lvalue)
+                          for lname, lvalue in labels.items())
+            d = '{' + d + '}'
+            lines.append('{} {} {}'.format(name, d, v))
 
-        '# HELP slow_rpc_requests  number of slow rpc requests',
-        '# TYPE slow_rpc_requests gauge',
+    for name, define in meta.items():
+        meta_lines.append('# HELP {} {}'.format(
+            name, define['help']))
+        meta_lines.append('# TYPE {} {}'.format(
+            name, define['type']))
+    meta_lines.append('')
 
-        '# HELP error_rpc_requests number of error rpc requests',
-        '# TYPE error_rpc_requests gauge',
-        '',
-        ]
     headers = {'Content-Type': 'text/plain'}
-    return web.Response(text='\n'.join(header + res + ['']),
+    return web.Response(text='\n'.join(meta_lines + lines + ['']),
                         headers=headers)
 
 async def http_server(bind='127.0.0.1:28081', ssl=None):
