@@ -58,10 +58,11 @@ async def main():
 
     # start cluster client and box
     await get_cluster().start()
-    _, handler = await bbox_server.http_server(args.boxid)
     
     httpd_mod = import_module(args.module)
     http_app = await httpd_mod.get_app(bind=args.bind)
+
+    _, handler = await bbox_server.http_server(args.boxid)    
     
     http_handler = http_app.make_handler()
     

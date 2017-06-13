@@ -12,6 +12,18 @@ from aiobbox.cluster import get_ticket
 from aiobbox.utils import import_module, abs_path
 from aiobbox.metrics import collect_cluster_metrics
 
+
+export_cluster = False
+
+parser = argparse.ArgumentParser(
+    prog='bbox httpd',
+    description='start bbox python project')
+parser.add_argument(
+    '--export_cluster',
+    type=bool,
+    default=export_cluster,
+    help='export the whole cluster info')
+
 async def get_box_metrics(bind, session):
     try:
         resp = await session.get('http://' + bind + '/metrics.json')
@@ -31,7 +43,8 @@ async def handle_metrics(request):
         else:
             res = []
             
-    res.append(collect_cluster_metrics())
+    if export_cluster:
+        res.append(collect_cluster_metrics())
 
     meta = {}
     lines = []
@@ -61,4 +74,9 @@ async def get_app(**kw):
     app.router.add_get('/metrics', handle_metrics)
     app.router.add_get('/', handle_metrics)
     return app
+
+async def start():
+    global export_cluster
+    args, _ = parser.parse_known_args()
+    export_cluster = args.export_cluster
 
