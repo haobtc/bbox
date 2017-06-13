@@ -67,8 +67,7 @@ case "$1" in
         fi
         ;;
     metrics)
-        
-        exec $PY3 -m aiobbox.tools.startmetrics "${@:2}"
+        exec bbox httpd aiobbox.services.metrics "${@:2}"
         ;;
     run)
         lang=`$PY3 -m aiobbox.tools.printticket language`

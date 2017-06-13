@@ -148,6 +148,9 @@ async def handle_metrics_json(request):
     return web.json_response(resp)
 
 async def handle_metrics(request):
+    '''
+    aggregate metrics of all nodes
+    '''
     resp = await collect_metrics()
     lines = []
 
