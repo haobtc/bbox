@@ -58,19 +58,19 @@ async def main():
 
     # start cluster client and box
     await get_cluster().start()
-    
+
     httpd_mod = import_module(args.module)
     http_app = await httpd_mod.get_app(bind=args.bind)
 
-    _, handler = await bbox_server.http_server(args.boxid)    
-    
+    _, handler = await bbox_server.http_server(args.boxid)
+
     http_handler = http_app.make_handler()
-    
+
     host, port = args.bind.split(':')
     logging.warn('httpd starts at %s', args.bind)
     loop = asyncio.get_event_loop()
-    
-        
+
+
     await loop.create_server(http_handler,
                              host, port,
                              ssl=ssl_context)

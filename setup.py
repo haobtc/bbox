@@ -12,6 +12,7 @@ setup(name='aiobbox',
           'aiohttp',
           'aiochannel',
           'websockets',
-          'aio_etcd'
+          'aio_etcd',
+          'netifaces'
       ]
 )

@@ -7,7 +7,7 @@ import asyncio
 import aio_etcd as etcd
 import aiohttp
 from collections import defaultdict
-from aiobbox.utils import json_to_str
+from aiobbox.utils import json_to_str, localbox_ip
 from aiobbox.exceptions import RegisterFailed, ETCDError
 from .etcd_client import EtcdClient
 from .cfg import SharedConfig, get_sharedconfig
@@ -29,6 +29,11 @@ class ClientAgent(EtcdClient):
         asyncio.ensure_future(self._watch_boxes())
         asyncio.ensure_future(self._watch_configs())
         self.state = 'STARTED'
+
+    def get_local_boxes(self):
+        iplist = [bind.split(':')[0]
+                  for bind in self.boxes.keys()]
+        return list(localbox_ip(*iplist))
 
     async def get_boxes(self, chg=None):
         if chg:

@@ -12,37 +12,46 @@ from aiobbox.cluster import get_ticket
 from aiobbox.utils import import_module, abs_path
 from aiobbox.metrics import collect_cluster_metrics
 
-
 export_cluster = False
+collect_localbox = False
 
 parser = argparse.ArgumentParser(
-    prog='bbox httpd',
+    prog='bbox metrics',
     description='start bbox python project')
 parser.add_argument(
     '--export_cluster',
     type=bool,
     default=export_cluster,
     help='export the whole cluster info')
+parser.add_argument(
+    '--collect_localbox',
+    type=bool,
+    default=collect_localbox,
+    help='coll')
 
 async def get_box_metrics(bind, session):
     try:
         resp = await session.get('http://' + bind + '/metrics.json')
     except ClientConnectionError:
         logging.error('client connection error')
-        return []
+        return {'meta': {}, 'lines': []}
     return await resp.json()
 
 async def handle_metrics(request):
     c = get_cluster()
 
     with ClientSession() as session:
-        fns = [get_box_metrics(bind, session)
-               for bind in c.boxes.keys()]
+        if collect_localbox:
+            fns = [get_box_metrics(bind, session)
+                   for bind in c.get_local_boxes()]
+        else:
+            fns = [get_box_metrics(bind, session)
+                   for bind in c.boxes.keys()]
         if fns:
             res = await asyncio.gather(*fns)
         else:
             res = []
-            
+
     if export_cluster:
         res.append(collect_cluster_metrics())
 
@@ -51,7 +60,7 @@ async def handle_metrics(request):
     meta_lines = []
     for resp in res:
         meta.update(resp['meta'])
-        
+
         for name, labels, v in resp['lines']:
             d = ', '.join('{}="{}"'.format(lname, lvalue)
                           for lname, lvalue in labels.items())
@@ -76,7 +85,7 @@ async def get_app(**kw):
     return app
 
 async def start():
-    global export_cluster
+    global export_cluster, collect_localbox
     args, _ = parser.parse_known_args()
     export_cluster = args.export_cluster
-
+    collect_localbox = args.collect_localbox

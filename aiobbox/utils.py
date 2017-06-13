@@ -1,6 +1,7 @@
 import re
 import os
 import json
+import netifaces
 
 def guess_json(p):
     if p in ('null', 'true', 'false'):
@@ -56,3 +57,21 @@ def force_str(v, encoding='utf-8'):
         return v.decode(encoding)
     else:
         return str(v)
+
+_localbox_ip_list = None
+def get_localbox_iplist():
+    global _localbox_ip_list
+    if _localbox_ip_list is not None:
+        return _localbox_ip_list
+
+    _localbox_ip_list = []
+    for intf in netifaces.interfaces():
+        for infos in netifaces.ifaddresses(intf).values():
+            for info in infos:
+                addr = info.get('addr')
+                if addr and re.match(r'\d+\.\d+\.\d+\.\d+', addr):
+                    _localbox_ip_list.append(addr)
+    return _localbox_ip_list
+
+def localbox_ip(*iplist):
+    return set(get_localbox_iplist()).intersection(set(iplist))
