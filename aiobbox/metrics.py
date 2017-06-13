@@ -48,5 +48,23 @@ def collect_cluster_metrics():
         'meta': meta,
         'lines': lines
         }
+
+def report_box_failure(bind):
+    meta = {
+        'box_fail': {
+            'type': 'gauge',
+            'help': 'box cannot connect'
+            }
+        }
+    c = get_cluster()
+    box = c.boxes.get(bind)
+    labels = {'bind': bind}
+    if box:
+        labels['box'] = box['boxid']
+    lines = [('box_fail', labels, 1)]
+    return {
+        'meta': meta,
+        'lines': lines
+        }
     
         

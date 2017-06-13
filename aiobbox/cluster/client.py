@@ -31,9 +31,9 @@ class ClientAgent(EtcdClient):
         self.state = 'STARTED'
 
     def get_local_boxes(self):
-        iplist = [bind.split(':')[0]
-                  for bind in self.boxes.keys()]
-        return list(localbox_ip(*iplist))
+        for bind in self.boxes.keys():
+            if localbox_ip(bind.split(':')[0]):
+                yield bind
 
     async def get_boxes(self, chg=None):
         if chg:

@@ -10,7 +10,7 @@ import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.cluster import get_ticket
 from aiobbox.utils import import_module, abs_path
-from aiobbox.metrics import collect_cluster_metrics
+from aiobbox.metrics import collect_cluster_metrics, report_box_failure
 
 export_cluster = False
 collect_localbox = False
@@ -33,8 +33,10 @@ async def get_box_metrics(bind, session):
     try:
         resp = await session.get('http://' + bind + '/metrics.json')
     except ClientConnectionError:
-        logging.error('client connection error')
-        return {'meta': {}, 'lines': []}
+        logging.error('client connection error to %s', bind)
+        # TODO: report failure to metrics
+        return report_box_failure(bind)
+        #return {'meta': {}, 'lines': []}
     return await resp.json()
 
 async def handle_metrics(request):

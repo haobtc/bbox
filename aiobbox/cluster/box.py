@@ -11,7 +11,7 @@ from .etcd_client import EtcdClient
 from .ticket import get_ticket
 from .cfg import get_sharedconfig
 
-BOX_TTL = 30
+BOX_TTL = 10
 
 class BoxAgent(EtcdClient):
     def __init__(self):
