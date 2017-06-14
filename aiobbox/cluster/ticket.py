@@ -3,7 +3,7 @@ import time
 import json
 import logging
 import sys
-from aiobbox.utils import abs_path, home_path
+from aiobbox.utils import abs_path, home_path, localbox_ip
 
 class Ticket:
     def __init__(self):
@@ -17,7 +17,7 @@ class Ticket:
         config_path_list.append(abs_path(
             'bbox.ticket.json'))
         config_path_list.append(home_path(
-            '.bbox.ticket.json'))
+            '.bbox/ticket.json'))
         
         for path in config_path_list:
             if os.path.exists(path):
@@ -33,6 +33,8 @@ class Ticket:
         
     def validate(self):
         assert re.match(r'[0-9a-zA-Z\_\.\-\+]+$', self.prefix)
+        # TODO: add more roles
+        assert localbox_ip(self.bind_ip)
 
     def keys(self):
         return self.data.keys()

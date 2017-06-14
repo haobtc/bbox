@@ -37,9 +37,7 @@ parser.add_argument(
     default='',
     help='box id')
 
-#httpd_mod = None
 async def main():
-    #global httpd_mod
     # start cluster client and box
     args, _ = parser.parse_known_args()
     httpd_mod = import_module(args.module)

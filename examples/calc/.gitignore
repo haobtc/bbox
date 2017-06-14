@@ -1,0 +1,5 @@
+*.pyc
+certs
+bbox.ticket.json
+tmp
+.DS_Store

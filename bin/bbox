@@ -28,6 +28,10 @@ function genkey() {
     fi
 
     mkdir -p certs/$prefix
+    if [ -f certs/$prefix/$prefix.key ]; then
+        echo The private key certs/$prefix/$prefix.key already exist! It is dangrous to overwrite it.
+        exit 1
+    fi
     cd certs/$prefix
 
     echo generating privkey

@@ -20,16 +20,16 @@ parser.add_argument(
 def main():
     args = parser.parse_args()
 
-
     config_file = os.path.join(os.getcwd(), 'bbox.ticket.json')
-    
+    gitignore_file = os.path.join(os.getcwd(), '.gitignore')
+
     if os.path.exists(config_file):
         print('project already initialized!',
               file=sys.stderr)
         sys.exit(1)
 
     prjname = os.path.basename(os.getcwd())
-    
+
     lang = args.language
     if lang not in ('python3', 'python'):
         print('language {} not supported'.format(lang),
@@ -48,6 +48,18 @@ def main():
         }
     with open(config_file, 'w', encoding='utf-8') as f:
         json.dump(config_json, f, indent=2, sort_keys=True)
+
+    if not os.path.exists(gitignore_file):
+        lines = [
+            '*.pyc',
+            'node_modules/',
+            '.DS_Store',
+            'certs/',
+            'tmp/',
+            'bbox.ticket.json'
+        ]
+        with open(gitignore_file, 'w', encoding='utf-8') as f:
+            f.write(''.join(line + '\n' for line in lines))
 
 if __name__ == '__main__':
     main()
