@@ -7,6 +7,7 @@ import argparse
 import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster, get_ticket
 from aiobbox.utils import import_module
+from aiobbox.handler import BaseHandler
 
 parser = argparse.ArgumentParser(
     prog='bbox run',
@@ -15,31 +16,27 @@ parser = argparse.ArgumentParser(
 parser.add_argument(
     'module',
     type=str,
-    nargs='+',
     help='the task module to load')
 
-async def run_mod(mod):
-    runfn = getattr(mod, 'run', None)
-    if runfn is None:
-        return
-    return await runfn()
-    
 async def main():
     cfg = get_ticket()
     if cfg.language != 'python3':
         print('language must be python3', file=sys.stderr)
         sys.exit(1)
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
+    mod = import_module(args.module)
 
-    modules = []
-    for mod in args.module:
-        modules.append(import_module(mod))
+    if hasattr(mod, 'Handler'):
+        handler = mod.Handler()
+    else:
+        handler = BaseHandler()
+    handler.add_arguments(parser)
+    args = parser.parse_args()    
 
     try:
         await get_cluster().start()
-        coros = [run_mod(mod) for mod in modules]
-        r = await asyncio.gather(*coros)
-        logging.info('tasks return %s', r)
+        r = await handler.run(args)
+        logging.info('task return %s', r)
     finally:
         c = get_cluster()
         c.cont = False

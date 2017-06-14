@@ -9,4 +9,13 @@ class BaseHandler:
         pass
 
     async def get_app(self, args):
+        '''
+        Called by starthttpd
+        '''
+        raise NotImplemented
+
+    async def run(self, args):
+        '''
+        Called by runtask
+        '''
         raise NotImplemented

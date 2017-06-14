@@ -1,8 +1,10 @@
 import re
+import string
 import ssl
 import os
 import json
 import netifaces
+import random
 
 def guess_json(p):
     if p in ('null', 'true', 'false'):
@@ -34,7 +36,7 @@ def parse_method(method):
                     method)
 
 def parse_int(v):
-    assert isinstance(v, (int, long))
+    assert isinstance(v, int)
     return v
 
 def parse_float(v):

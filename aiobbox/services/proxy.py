@@ -61,7 +61,6 @@ async def handle_ws_body(ws, body):
             if body['method'] not in _whitelist:
                 raise ServiceError('access denied')
 
-        # TODO: srv::method white list
         srv, method = m.group('srv'), m.group('method')
 
         params = body['params']
@@ -86,7 +85,6 @@ class Handler(BaseHandler):
         app = web.Application()
         app.router.add_post('/jsonrpc/2.0/api', handle_rpc)
         app.router.add_route('*', '/jsonrpc/2.0/ws', handle_ws)
-        #app.router.add_get('/', index)
         return app
 
     def add_arguments(self, parser):
