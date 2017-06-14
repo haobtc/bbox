@@ -4,39 +4,34 @@ import logging
 import uuid
 import json
 import asyncio
+from urllib.parse import urljoin
 from aiohttp import web, ClientSession, ClientConnectionError
 import argparse
 import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.cluster import get_ticket
 from aiobbox.utils import import_module, abs_path
+from aiobbox.client import HttpClient
 from aiobbox.metrics import collect_cluster_metrics, report_box_failure
+from aiobbox.handler import BaseHandler
 
 export_cluster = False
 collect_localbox = False
 
-parser = argparse.ArgumentParser(
-    prog='bbox metrics',
-    description='start bbox python project')
-parser.add_argument(
-    '--export_cluster',
-    type=bool,
-    default=export_cluster,
-    help='export the whole cluster info')
-parser.add_argument(
-    '--collect_localbox',
-    type=bool,
-    default=collect_localbox,
-    help='coll')
+_http_clients = {}
 
-async def get_box_metrics(bind, session):
+async def get_box_metrics(connect):
+    if connect not in _http_clients:
+        client = HttpClient(connect)
+        _http_clients[connect] = client
+    else:
+        client = _http_clients[connect]
     try:
-        resp = await session.get('http://' + bind + '/metrics.json')
+        url = urljoin(client.url_prefix, '/metrics.json')
+        resp = await client.session.get(url)
     except ClientConnectionError:
         logging.error('client connection error to %s', bind)
-        # TODO: report failure to metrics
         return report_box_failure(bind)
-        #return {'meta': {}, 'lines': []}
     return await resp.json()
 
 async def handle_metrics(request):
@@ -44,10 +39,10 @@ async def handle_metrics(request):
 
     with ClientSession() as session:
         if collect_localbox:
-            fns = [get_box_metrics(bind, session)
+            fns = [get_box_metrics(bind)
                    for bind in c.get_local_boxes()]
         else:
-            fns = [get_box_metrics(bind, session)
+            fns = [get_box_metrics(bind)
                    for bind in c.boxes.keys()]
         if fns:
             res = await asyncio.gather(*fns)
@@ -80,14 +75,26 @@ async def handle_metrics(request):
     return web.Response(text='\n'.join(meta_lines + lines + ['']),
                         headers=headers)
 
-async def get_app(**kw):
-    app = web.Application()
-    app.router.add_get('/metrics', handle_metrics)
-    app.router.add_get('/', handle_metrics)
-    return app
+class Handler(BaseHandler):
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--export_cluster',
+            type=bool,
+            default=export_cluster,
+            help='export the whole cluster info')
+        parser.add_argument(
+            '--collect_localbox',
+            type=bool,
+            default=collect_localbox,
+            help='coll')
 
-async def start():
-    global export_cluster, collect_localbox
-    args, _ = parser.parse_known_args()
-    export_cluster = args.export_cluster
-    collect_localbox = args.collect_localbox
+    async def get_app(self, args):
+        app = web.Application()
+        app.router.add_get('/metrics', handle_metrics)
+        app.router.add_get('/', handle_metrics)
+        return app
+
+    async def start(self, args):
+        global export_cluster, collect_localbox
+        export_cluster = args.export_cluster
+        collect_localbox = args.collect_localbox

@@ -1,5 +1,4 @@
 import os, sys
-import ssl
 import logging
 import uuid
 import json
@@ -8,7 +7,8 @@ import argparse
 import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.cluster import get_ticket
-from aiobbox.utils import import_module, abs_path
+from aiobbox.utils import import_module, get_ssl_context
+from aiobbox.handler import BaseHandler
 
 parser = argparse.ArgumentParser(
     prog='bbox httpd',
@@ -29,7 +29,7 @@ parser.add_argument(
     '--ssl',
     type=str,
     default='',
-    help='ssl prefix, the files certs/$prefix.crt and certs/$prefix.key must exist if specified')
+    help='ssl prefix, the files certs/$prefix/$prefix.crt and certs/$prefix/$prefix.key must exist if specified')
 
 parser.add_argument(
     '--boxid',
@@ -37,57 +37,50 @@ parser.add_argument(
     default='',
     help='box id')
 
-httpd_mod = None
+#httpd_mod = None
 async def main():
-    global httpd_mod
-
+    #global httpd_mod
+    # start cluster client and box
     args, _ = parser.parse_known_args()
+    httpd_mod = import_module(args.module)
+    if hasattr(httpd_mod, 'Handler'):
+        assert issubclass(httpd_mod.Handler, BaseHandler)
+        mod_handler = httpd_mod.Handler()
+    else:
+        mod_handler = BaseHandler()
+    mod_handler.add_arguments(parser)
+
+    args = parser.parse_args()
     if not args.boxid:
         args.boxid = uuid.uuid4().hex
 
-    ssl_context = None
-    if args.ssl:
-        ssl_cert = abs_path(
-            'certs/{}.crt'.format(args.ssl))
-        ssl_key = abs_path(
-            'certs/{}.key'.format(args.ssl))
-        ssl_context = ssl.create_default_context(
-            ssl.Purpose.CLIENT_AUTH)
-        ssl_context.load_cert_chain(
-            ssl_cert, ssl_key)
-
-    # start cluster client and box
+    ssl_context = get_ssl_context(args.ssl)
     await get_cluster().start()
 
-    httpd_mod = import_module(args.module)
-    http_app = await httpd_mod.get_app(bind=args.bind)
-
-    _, handler = await bbox_server.http_server(args.boxid)
+    http_app = await mod_handler.get_app(args)
+    _, handler = await bbox_server.start_server(args)
 
     http_handler = http_app.make_handler()
 
     host, port = args.bind.split(':')
     logging.warn('httpd starts at %s', args.bind)
     loop = asyncio.get_event_loop()
-
-
     await loop.create_server(http_handler,
                              host, port,
                              ssl=ssl_context)
-
-    if hasattr(httpd_mod, 'start'):
-        await httpd_mod.start()
-
-    return handler, httpd_mod, http_handler
+    await mod_handler.start(args)
+    return handler, mod_handler, http_handler
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-    handler, httpd_mod, http_handler = loop.run_until_complete(main())
+    handler, mod_handler, http_handler = loop.run_until_complete(main())
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        if hasattr(httpd_mod, 'shutdown'):
-            loop.run_until_complete(httpd_mod.shutdown())
-        loop.run_until_complete(get_box().deregister())
-        loop.run_until_complete(handler.finish_connections())
-        loop.run_until_complete(http_handler.finish_connections())
+        mod_handler.shutdown()
+        loop.run_until_complete(
+            get_box().deregister())
+        loop.run_until_complete(
+            handler.finish_connections())
+        loop.run_until_complete(
+            http_handler.finish_connections())

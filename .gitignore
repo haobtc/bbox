@@ -101,3 +101,5 @@ ENV/
 default.etcd/
 bbox.ticket.json
 certs/
+.DS_Store
+tmp/

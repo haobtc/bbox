@@ -16,6 +16,7 @@ BOX_TTL = 10
 class BoxAgent(EtcdClient):
     def __init__(self):
         super(BoxAgent, self).__init__()
+        self.ssl_prefix = None        
         self.started = False
 
     async def start(self, boxid, srv_names):
@@ -29,10 +30,12 @@ class BoxAgent(EtcdClient):
         await self.register()
         self.started = True
 
+
     def box_info(self, bind=None):
         bind = bind or self.bind
         return json_to_str({
             'bind': bind,
+            'ssl': self.ssl_prefix,
             'boxid': self.boxid,
             'services': self.srv_names})
 

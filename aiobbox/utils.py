@@ -1,4 +1,5 @@
 import re
+import ssl
 import os
 import json
 import netifaces
@@ -20,7 +21,7 @@ def json_pp(v):
     return json.dumps(v, indent=2, sort_keys=True)
 
 def json_to_str(v):
-    return json.dumps(v, sort_keys=True)    
+    return json.dumps(v, sort_keys=True)
 
 def import_module(spec):
     mod = __import__(spec)
@@ -75,3 +76,25 @@ def get_localbox_iplist():
 
 def localbox_ip(*iplist):
     return set(get_localbox_iplist()).intersection(set(iplist))
+
+def get_ssl_context(ssl_prefix):
+    if ssl_prefix:
+        ssl_cert = abs_path(
+            'certs/{}/{}.crt'.format(ssl_prefix, ssl_prefix))
+        ssl_key = abs_path(
+            'certs/{}/{}.key'.format(ssl_prefix, ssl_prefix))
+        ssl_context = ssl.create_default_context(
+            purpose=ssl.Purpose.CLIENT_AUTH)
+        ssl_context.load_cert_chain(
+            ssl_cert, ssl_key)
+        return ssl_context
+
+def get_cert_ssl_context(ssl_prefix):
+    if ssl_prefix:
+        ssl_cert = abs_path(
+            'certs/{}/{}.crt'.format(ssl_prefix, ssl_prefix))
+        ssl_context = ssl.create_default_context(
+            purpose=ssl.Purpose.CLIENT_AUTH,
+            cafile=ssl_cert)
+        return ssl_context
+

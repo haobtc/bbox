@@ -9,6 +9,7 @@ import json
 import uuid
 from aiobbox.cluster import get_cluster
 from aiobbox.exceptions import ConnectionError, Retry
+from aiobbox.utils import get_cert_ssl_context
 
 try:
     import selectors
@@ -16,9 +17,17 @@ except ImportError:
     from asyncio import selectors
 
 class HttpClient:
-    def __init__(self, url_prefix='http://localhost:8080'):
-        self.url_prefix = url_prefix
-        self.session = aiohttp.ClientSession()
+    def __init__(self, connect):
+        c = get_cluster()
+        box = c.boxes[connect]
+        self.ssl_prefix = box['ssl']
+        if self.ssl_prefix:
+            self.url_prefix = 'https://' + connect
+        else:
+            self.url_prefix = 'http://' + connect
+        ssl_context =get_cert_ssl_context(self.ssl_prefix)
+        conn = aiohttp.TCPConnector(ssl_context=ssl_context)
+        self.session = aiohttp.ClientSession(connector=conn)
 
     async def request(self, srv, method, *params):
         url = urljoin(self.url_prefix,
@@ -34,14 +43,27 @@ class HttpClient:
             ret = await resp.text()
             return ret
 
+    def __del__(self):
+        self.session = None
+
 class WebSocketClient:
-    def __init__(self, url_prefix='ws://localhost:8080'):
-        self.session = aiohttp.ClientSession()
-        self.url_prefix = url_prefix
+    def __init__(self, connect):
+        c = get_cluster()
+        box = c.boxes[connect]
+        self.ssl_prefix = box['ssl']
+        if self.ssl_prefix:
+            self.url_prefix = 'wss://' + connect
+        else:
+            self.url_prefix = 'ws://' + connect
+
+        ssl_context = get_cert_ssl_context(self.ssl_prefix)
+        conn = aiohttp.TCPConnector(ssl_context=ssl_context)
+        self.session = aiohttp.ClientSession(connector=conn)
         self.waiters = {}
         self.ws = None
         self.notify_channel = None
         self.cont = True
+
         asyncio.ensure_future(self.connect_wait())
 
     @property
@@ -127,10 +149,9 @@ class WebSocketClient:
                               self.ws.exception() if self.ws else None)
                 return await self.onclosed()
             elif msg.type == aiohttp.WSMsgType.CLOSED:
-                print('closed')
+                logging.debug('websocket closed')
                 return
 
-            #data = json.loads(data)
             req_id = data.get('id')
             if req_id:
                 channel = self.waiters.get(req_id)
@@ -177,34 +198,24 @@ class FullConnectPool:
         self.max_concurrency = 10
 
     async def ensure_clients(self, srv):
-        agent = get_cluster()        
-        boxes = agent.route[srv]        
-        #c = self.get_client(srv, policy=self.FIRST)
-        #if c:
-        #    return
-        # cnt = self.get_client_count(srv)
-        # agent = get_cluster()
-        # if cnt > self.max_concurrency:
-        #     return
-        # else:
-        #     # dont import more active connections
-        #     boxes = agent.route[srv]
-        #     if cnt >= len(boxes) - 1:
-        #         return
+        agent = get_cluster()
+        boxes = agent.route[srv]
 
         # connect at most n concurrent connections
-        for box in sorted(boxes)[:self.max_concurrency]:
-            if box not in self.pool:
+        for bind in sorted(boxes)[:self.max_concurrency]:
+            if bind not in self.pool:
                 # add box to pool
-                client = WebSocketClient('ws://' + box)
-                self.pool[box] = client
+                box = agent.boxes[bind]
+                client = WebSocketClient(
+                    bind)
+                self.pool[bind] = client
 
-        for box, client in list(self.pool.items()):
-            if box not in agent.boxes:
-                logging.warning('remove box %s', box)
+        for bind, client in list(self.pool.items()):
+            if bind not in agent.boxes:
+                logging.warning('remove box %s', bind)
                 # remove box due to server done
                 client.close()
-                del self.pool[box]
+                del self.pool[bind]
 
         for _ in range(30):
             c = self.get_client(srv, policy=self.FIRST)

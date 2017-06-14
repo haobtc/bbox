@@ -6,6 +6,7 @@ from aiohttp import web
 from aiobbox.server import Service, ServiceError
 from aiobbox.client import pool
 from aiobbox.exceptions import ConnectionError
+from aiobbox.handler import BaseHandler
 
 # service
 srv = Service()
@@ -67,23 +68,21 @@ async def handle_req(request):
 async def all_middleware(app, handler):
     return handle_req
 
-parser = argparse.ArgumentParser(
-    description='http gateway')
-parser.add_argument(
-    '--backend',
-    type=str,
-    default=''
-    help='srv::method as the backend')
+class Handler(BaseHandler):
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--backend',
+            type=str,
+            default=''
+            help='srv::method as the backend')
 
-async def start(**kw):
-    global default_backend
-    args, _ = parser.parse_known_args()
-    default_backend = args.backend
+    async def start(self, args):
+        global default_backend
+        default_backend = args.backend
 
-async def shutdown():
-    pass
+    async def shutdown(self):
+        pass
 
-async def get_app(bind='127.0.0.1:28080'):
-    app = web.Application(middlewares=[all_middleware])
-    return app
-        
+    async def get_app(self, args):
+        app = web.Application(middlewares=[all_middleware])
+        return app

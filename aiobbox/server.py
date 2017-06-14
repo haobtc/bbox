@@ -8,7 +8,7 @@ from aiohttp import web
 from functools import wraps
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.exceptions import ServiceError
-from aiobbox.utils import parse_method
+from aiobbox.utils import parse_method, get_ssl_context
 from aiobbox.metrics import collect_metrics
 from aiobbox import stats
 
@@ -37,7 +37,6 @@ class Service(object):
             self.methods[name] = MethodRef(__w, private=private)
             return __w
         return decorator
-
 
 class Request:
     def __init__(self, body):
@@ -166,13 +165,15 @@ async def handle_metrics(request):
         lines.append('{} {} {}'.format(name, d, v))
     return web.Response(text='\n'.join(lines))
 
-async def http_server(boxid, loop=None):
-    if loop is None:
-        loop = asyncio.get_event_loop()
+async def start_server(args):
+    boxid = args.boxid
+
+    ssl_context = get_ssl_context(args.ssl)
 
     # server etcd agent
     srv_names = list(srv_dict.keys())
     curr_box = get_box()
+    curr_box.ssl_prefix = args.ssl
     await curr_box.start(boxid, srv_names)
 
     app = web.Application()
@@ -187,5 +188,8 @@ async def http_server(boxid, loop=None):
         curr_box.boxid,
         curr_box.bind))
     handler = app.make_handler()
-    srv = await loop.create_server(handler, host, port)
+    loop = asyncio.get_event_loop()
+    srv = await loop.create_server(handler,
+                                   host, port,
+                                   ssl=ssl_context)
     return srv, handler

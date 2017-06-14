@@ -10,7 +10,7 @@ function help() {
     echo ' init                      - generate ticket.json'
     echo ' start <modspec> [modspec] - start rpc server'
     echo ' httpd <modspec>           - start httpd and load module'
-    echo ' metrics                   - prometheus metrics url'    
+    echo ' metrics                   - prometheus metrics url'
     echo ' run <modspec> [modspec]   - run tasks'
     echo ' rpc <srv::method> <arg> [arg] - trigger rpc request'
     echo ' config <op> <arg> [arg]   - config operations'
@@ -27,8 +27,8 @@ function genkey() {
         exit 1
     fi
 
-    mkdir -p certs
-    cd certs
+    mkdir -p certs/$prefix
+    cd certs/$prefix
 
     echo generating privkey
     openssl genrsa -des3 -passout pass:x -out $prefix.pass.key 2048
@@ -36,10 +36,14 @@ function genkey() {
     rm $prefix.pass.key
     openssl req -new -key $prefix.key -out $prefix.csr
 
-    openssl x509 -req -sha256 -days 365 -in $prefix.csr -signkey $prefix.key -out $prefix.crt
+    # make it valid for 10 years
+    openssl x509 -req -sha256 -days 3650 -in $prefix.csr -signkey $prefix.key -out $prefix.crt
 
-    cd ..
-    echo keys generated to ./certs/
+    echo '*** Generating p12 ***'
+    openssl pkcs12 -export -in $prefix.crt -inkey $prefix.key -out $prefix.p12
+
+    cd ../..
+    echo keys generated to ./certs/$prefix
 }
 
 case "$1" in

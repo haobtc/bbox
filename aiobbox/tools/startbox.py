@@ -7,6 +7,7 @@ import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.cluster import get_ticket
 from aiobbox.utils import import_module
+from aiobbox.handler import BaseHandler
 
 parser = argparse.ArgumentParser(
     prog='bbox start',
@@ -24,6 +25,12 @@ parser.add_argument(
     default='',
     help='box id')
 
+parser.add_argument(
+    '--ssl',
+    type=str,
+    default='',
+    help='ssl prefix, the files certs/$prefix/$prefix.crt and certs/$prefix/$prefix.key must exist if specified')
+
 async def main():
     cfg = get_ticket()
     if cfg.language != 'python3':
@@ -33,38 +40,30 @@ async def main():
     if not args.boxid:
         args.boxid = uuid.uuid4().hex
 
-    # start cluster client
-    await get_cluster().start()
-
-    shutdown_callbacks = []
-    start_callbacks = []
+    mod_handlers = []
     for modspec in args.module:
         mod = import_module(modspec)
 
-        start = getattr(mod, 'start', None)
-        if start:
-            start_callbacks.append(start)
+        if hasattr(mod, 'Handler'):
+            mod_handlers.append(mod.Handler())
+        else:
+            mod_handlers.append(BaseHandler())
 
-        shutdown = getattr(mod, 'shutdown', None)
-        if shutdown:
-            shutdown_callbacks.append(shutdown)
+    # start cluster client
+    await get_cluster().start()
+    src, handler = await bbox_server.start_server(args)
 
-    src, handler = await bbox_server.http_server(args.boxid)
-
-    for start in start_callbacks:
-        await start()
-    return handler, shutdown_callbacks
+    for h in mod_handlers:
+        await h.start(args)
+    return handler, mod_handlers
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-    handler, shutdown_callbacks = loop.run_until_complete(main())
+    handler, mod_handlers = loop.run_until_complete(main())
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        for shutdown in shutdown_callbacks:
-            loop.run_until_complete(
-                asyncio.wait_for(
-                    shutdown(),
-                    timeout=2))
+        for h in mod_handlers:
+            h.shutdown()
         loop.run_until_complete(get_box().deregister())
         loop.run_until_complete(handler.finish_connections())
