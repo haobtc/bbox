@@ -59,23 +59,24 @@ def force_str(v, encoding='utf-8'):
     else:
         return str(v)
 
-_localbox_ip_list = None
-def get_localbox_iplist():
-    global _localbox_ip_list
-    if _localbox_ip_list is not None:
-        return _localbox_ip_list
+_localbox_ipset = None
+def get_localbox_ipset():
+    global _localbox_ipset
+    if _localbox_ipset is not None:
+        return _localbox_ipset
 
-    _localbox_ip_list = []
+    _localbox_ipset = set()
     for intf in netifaces.interfaces():
         for infos in netifaces.ifaddresses(intf).values():
             for info in infos:
                 addr = info.get('addr')
-                if addr and re.match(r'\d+\.\d+\.\d+\.\d+', addr):
-                    _localbox_ip_list.append(addr)
-    return _localbox_ip_list
+                if addr and re.match(
+                        r'\d+\.\d+\.\d+\.\d+', addr):
+                    _localbox_ipset.add(addr)
+    return _localbox_ipset
 
 def localbox_ip(*iplist):
-    return set(get_localbox_iplist()).intersection(set(iplist))
+    return get_localbox_ipset().intersection(set(iplist))
 
 def get_ssl_context(ssl_prefix):
     if ssl_prefix:

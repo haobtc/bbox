@@ -10,6 +10,7 @@ import uuid
 from aiobbox.cluster import get_cluster
 from aiobbox.exceptions import ConnectionError, Retry
 from aiobbox.utils import get_cert_ssl_context
+from aiobbox.server import has_service, Request
 
 try:
     import selectors
@@ -25,7 +26,7 @@ class HttpClient:
             self.url_prefix = 'https://' + connect
         else:
             self.url_prefix = 'http://' + connect
-        ssl_context =get_cert_ssl_context(self.ssl_prefix)
+        ssl_context = get_cert_ssl_context(self.ssl_prefix)
         conn = aiohttp.TCPConnector(ssl_context=ssl_context)
         self.session = aiohttp.ClientSession(connector=conn)
 
@@ -198,6 +199,8 @@ class FullConnectPool:
         self.max_concurrency = 10
 
     async def ensure_clients(self, srv):
+        if has_service(srv):
+            return
         agent = get_cluster()
         boxes = agent.route[srv]
 
@@ -206,8 +209,7 @@ class FullConnectPool:
             if bind not in self.pool:
                 # add box to pool
                 box = agent.boxes[bind]
-                client = WebSocketClient(
-                    bind)
+                client = WebSocketClient(bind)
                 self.pool[bind] = client
 
         for bind, client in list(self.pool.items()):
@@ -257,6 +259,16 @@ class FullConnectPool:
     async def request(self, srv, method, *params, boxid=None, retry=0, req_id=None):
         if not req_id:
             req_id = uuid.uuid4().hex
+        if has_service(srv):
+            # if local has srv,
+            # call it by default to avoid network failure
+            req = Request({
+                'id': req_id,
+                'params': params,
+                'method': '{}::{}'.format(srv, method)
+            })
+            return await req.handle()
+        
         for rty in range(retry + 1):
             try:
                 return await self._request(srv, method,

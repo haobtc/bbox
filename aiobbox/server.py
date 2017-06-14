@@ -15,10 +15,12 @@ from aiobbox import stats
 DEBUG = True
 srv_dict = {}
 
+def has_service(srv):
+    return srv in srv_dict
+
 class MethodRef:
-    def __init__(self, fn, private=False):
+    def __init__(self, fn, **kw):
         self.fn = fn
-        self.private = private
 
 class Service(object):
     def __init__(self):
@@ -29,12 +31,12 @@ class Service(object):
             logging.warn('srv {} already exist'.format(srv_name))
         srv_dict[srv_name] = self
 
-    def method(self, name, private=False):
+    def method(self, name):
         def decorator(fn):
             __w = wraps(fn)(fn)
             if name in self.methods:
                 logging.warn('method {} already exist'.format(name))
-            self.methods[name] = MethodRef(__w, private=private)
+            self.methods[name] = MethodRef(__w)
             return __w
         return decorator
 
