@@ -124,6 +124,8 @@ class Request:
             code = getattr(e, 'code', None)
             if code:
                 error_info['code'] = code
+            else:
+                error_info['code'] = e.__class__.__name__
             if DEBUG:
                 error_info['stack'] = traceback.format_exc()
             resp = {'error': error_info,

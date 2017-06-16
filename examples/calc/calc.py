@@ -1,13 +1,18 @@
 import sys
 import asyncio
 import urllib.parse as urlparse
-from aiobbox.server import Service, ServiceError
+from aiobbox.server import Service, ServiceError, Request
 from aiobbox.cluster import get_box
+from enforce import runtime_validation
 
 srv = Service()
+@runtime_validation
+def _add2num(a:int, b:int) -> int:
+    return a + b
+
 @srv.method('add2num')
 async def add2num(request, a, b):
-    return a + b
+    return _add2num(a, b)
 
 @srv.method('add2sleep')
 async def add2sleep(request, a, b, sec):
