@@ -1,15 +1,44 @@
 import time
+import ssl
 import re
 import uuid
 from hashlib import sha256
+from aiobbox import testing
 from aiobbox.server import Service
+from aiobbox.cluster import get_cluster
 from aiobbox.exceptions import ServiceError
 from aiobbox.cluster import get_sharedconfig
 from aiobbox.utils import parse_int
 
 srv = Service()
 
-@srv.method('createConsumerToken')
+@srv.method('createConsumer')
+async def create_consumer(request, consumer):
+    if not testing.test_mode:
+        raise ServiceError('access denied')
+
+    if not re.match(r'\w+$', consumer):
+        raise Exception('invalid consumer')
+
+    cfg = get_sharedconfig()
+    coptions = cfg.get('consumers', consumer)
+    if coptions:
+        raise Exception('consumer already exist')
+
+    coptions = {}
+    coptions['secret'] = uuid.uuid4().hex
+    coptions['seed'] = ssl.RAND_bytes(256).hex()
+
+    c = get_cluster()
+    await c.set_config('consumers', consumer, coptions)
+
+    # TODO: limit the consumer size
+    return {
+        'consumer': consumer,
+        'secret': coptions['secret']
+    }
+
+@srv.method('createToken')
 async def create_consumer_token(request, consumer, secret, options=None):
     if options is None:
         options = {} #'expire_in': 3 * 86400}
@@ -38,11 +67,12 @@ async def create_consumer_token(request, consumer, secret, options=None):
                       str(expire_at),
                       nonce, digest])
     return {
+        'consumer': consumer,
         'token': token,
         'expire_at': expire_at
     }
 
-@srv.method('verifyConsumerToken')
+@srv.method('verifyToken')
 async def verify_consumer_token(request, token):
     arr = token.split('|')
     if len(arr) != 4 or re.search(r'\s', token):
@@ -53,7 +83,7 @@ async def verify_consumer_token(request, token):
     coptions = cfg.get('consumers', consumer)
     if not coptions:
         raise ServiceError('consumer not found')
-    
+
     if int(expire_at) < time.time():
         raise ServiceError('token expired')
 
@@ -71,6 +101,6 @@ async def verify_consumer_token(request, token):
         'expire_at': expire_at,
         'verified': True
         }
-    
+
 srv.register('bbox.consumer')
-    
+

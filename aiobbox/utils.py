@@ -25,6 +25,9 @@ def json_pp(v):
 def json_to_str(v):
     return json.dumps(v, sort_keys=True)
 
+def map_bytes_to_str(alist, encoding='utf-8'):
+    return [v.decode(encoding) for v in alist]
+
 def import_module(spec):
     mod = __import__(spec)
     for sec in spec.split('.')[1:]:

@@ -6,6 +6,7 @@ import asyncio
 import json
 from aiohttp import web
 from functools import wraps
+from aiobbox import testing
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.exceptions import ServiceError
 from aiobbox.utils import parse_method, get_ssl_context
@@ -31,8 +32,12 @@ class Service(object):
             logging.warn('srv {} already exist'.format(srv_name))
         srv_dict[srv_name] = self
 
-    def method(self, name):
+    def method(self, name, for_test=False):
         def decorator(fn):
+            if for_test and not testing.test_mode:
+                # this method cannot be added
+                # for non testing env
+                return fn
             __w = wraps(fn)(fn)
             if name in self.methods:
                 logging.warn('method {} already exist'.format(name))
@@ -96,14 +101,23 @@ class Request:
                 'message': getattr(e, 'message', str(e)),
                 'code': e.code
             }
+            logging.warn(
+                'service error on JSON-RPC id %s',
+                self.req_id,
+                exc_info=True)
             resp = {'error': error_info,
                     'id': self.req_id,
                     'result': None}
         except Exception as e:
             import traceback
-            traceback.print_exc()
+            logging.error('error on JSON-RPC id %s',
+                          self.req_id,
+                          exc_info=True)
+
             if stats_name:
-                stats.error_rpc_request_count.incr(stats_name)
+                stats.error_rpc_request_count.incr(
+                    stats_name)
+
             error_info = {
                 'message': getattr(e, 'message', str(e)),
                 }

@@ -168,18 +168,13 @@ class MethodRef:
     def __init__(self, name, srv_ref):
         self.name = name
         self.srv_ref = srv_ref
-        self.kw = {}
 
-    def options(self, **kw):
-        self.kw.update(kw)
-        return self
-
-    async def __call__(self, *params):
+    async def __call__(self, *params, **kw):
         return await self.srv_ref.pool.request(
             self.srv_ref.name,
             self.name,
             *params,
-            **self.kw)
+            **kw)
 
 class ServiceRef:
     def __init__(self, srv_name, pool):
@@ -254,6 +249,9 @@ class FullConnectPool:
             return random.choice(clients)
 
     def __getattr__(self, name):
+        return ServiceRef(name, self)
+
+    def __getitem__(self, name):
         return ServiceRef(name, self)
 
     async def request(self, srv, method, *params, boxid=None, retry=0, req_id=None):
