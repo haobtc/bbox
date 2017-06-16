@@ -76,7 +76,8 @@ async def create_consumer_token(request, consumer, secret, options=None):
 async def verify_consumer_token(request, token):
     arr = token.split('|')
     if len(arr) != 4 or re.search(r'\s', token):
-        raise ServiceError('invalid token')
+        raise ServiceError('invalid token',
+                           'token {}'.format(token))
 
     consumer, expire_at, nonce, digest = arr
     cfg = get_sharedconfig()
