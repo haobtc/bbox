@@ -14,16 +14,35 @@ srv = Service()
 
 @srv.method('createConsumer')
 async def create_consumer(request, consumer):
+    '''
+    Create a consumer for test
+    -----
+    parameters:
+      - name: consumer
+        description: consumer name
+        type: string
+        require: true
+
+    return:
+      - name: consumer
+        description: the same name with the parameter
+        type: string
+
+      - name: secret
+        description: consumer secret used to get consumer token
+        type: string
+    '''
     if not testing.test_mode:
         raise ServiceError('access denied')
 
-    if not re.match(r'\w+$', consumer):
-        raise Exception('invalid consumer')
+    if (not isinstance(consumer, str)
+        or not re.match(r'\w+$', consumer)):
+        raise ServiceError('invalid consumer')
 
     cfg = get_sharedconfig()
     coptions = cfg.get('consumers', consumer)
     if coptions:
-        raise Exception('consumer already exist')
+        raise ServiceError('consumer already exist')
 
     coptions = {}
     coptions['secret'] = uuid.uuid4().hex
@@ -40,13 +59,40 @@ async def create_consumer(request, consumer):
 
 @srv.method('createToken')
 async def create_consumer_token(request, consumer, secret, options=None):
-    if options is None:
-        options = {} #'expire_in': 3 * 86400}
+    '''
+    Create a consume token by secret
+    -----
+    parameters:
+      - name: consumer
+        description: the consumer name
+        type: string
+        require: true
+      - name: secret
+        description: consumer secret
+        type: string
+        require: true
+      - name options
+        descriptions: consumer token options
+        type: string
+        require: true
+        elements:
+          - name: expire_in
+            description: the consumer token expiration in seconds
+            type: int
+            require: false
+            default: 3 * 86400
+    '''
 
+    if not isinstance(consumer, str):
+        raise ServiceError('invalid consumer')
+    options = options or {}
     cfg = get_sharedconfig()
     coptions = cfg.get('consumers', consumer)
     if not coptions:
         raise ServiceError('consumer not found')
+
+    if not isinstance(secret, str):
+        raise ServiceError('invalid secret')
 
     if coptions['secret'] != secret:
         raise ServiceError('consumer verify failed')
