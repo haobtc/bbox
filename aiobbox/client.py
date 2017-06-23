@@ -40,7 +40,8 @@ class HttpClient:
             'method': method,
             'params': params
             }
-        async with self.session.post(url, json=payload, timeout=10) as resp:
+        async with self.session.post(
+                url, json=payload, timeout=10) as resp:
             ret = await resp.text()
             return ret
 

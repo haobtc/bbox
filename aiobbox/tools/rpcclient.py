@@ -3,10 +3,12 @@ import re
 import json
 import asyncio
 import argparse
+from aiobbox.log import config_log
 import aiobbox.client as bbox_client
 from aiobbox.cluster import get_cluster
 from aiobbox.utils import guess_json, json_pp, json_to_str
 
+config_log()
 parser = argparse.ArgumentParser(
     prog='bbox rpc',
     description='test an rpc interface')

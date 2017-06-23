@@ -2,6 +2,9 @@ import os, sys
 import json
 import argparse
 from aiobbox.cluster import get_ticket
+from aiobbox.log import config_log
+
+config_log(mute_console=True)
 
 parser = argparse.ArgumentParser(
     description='start bbox python project')

@@ -37,7 +37,7 @@ class ClientAgent(EtcdClient):
 
     async def get_boxes(self, chg=None):
         if chg:
-            logging.debug('get boxes on change', chg)
+            logging.debug('get boxes on change %s', chg)
         new_route = defaultdict(list)
         boxes = {}
         try:
