@@ -47,6 +47,8 @@ class ClientAgent(EtcdClient):
                 m = re.match(r'/[^/]+/boxes/(?P<box>[^/]+)$', v.key)
                 if not m:
                     continue
+                if not v.value:
+                    logging.warn('v has no value %s', v)
                 box_info = json.loads(v.value)
                 bind = box_info['bind']
                 boxes[bind] = box_info

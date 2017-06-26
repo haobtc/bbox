@@ -91,6 +91,7 @@ def get_ssl_context(ssl_prefix):
             'certs/{}/{}.key'.format(ssl_prefix, ssl_prefix))
         ssl_context = ssl.create_default_context(
             purpose=ssl.Purpose.CLIENT_AUTH)
+        #ssl_context.verify_mode = ssl.CERT_REQUIRED
         ssl_context.load_cert_chain(
             ssl_cert, ssl_key)
         return ssl_context

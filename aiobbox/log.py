@@ -41,8 +41,9 @@ def config_log(mute_console=None):
     handlers = ['syslog']
     
     if mute_console is None:
-        mute_console = (os.getenv('BBOX_LOG_MUTE')
-                        in ('1', 'true', 'yes'))
+        mute_console = (
+            os.getenv('BBOX_LOG_MUTE', '').lower()
+            in ('1', 'true', 'yes'))
 
     if not mute_console:
         handlers.append('console')
