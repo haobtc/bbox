@@ -45,7 +45,7 @@ async def load_config(args):
         new_sections = json.load(f)
     rem_set, add_set = get_sharedconfig().compare_sections(
         new_sections)
-    if not args.merge:
+    if args.purge:
         for sec, key, value in rem_set:
             print("delete", sec, key)
             await get_cluster().del_config(sec, key)

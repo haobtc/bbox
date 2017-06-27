@@ -17,7 +17,7 @@ class EtcdClient:
             return '/{}{}'.format(cfg.prefix, p)
         else:
             return '/{}/{}'.format(cfg.prefix, p)
-        
+
     @property
     def prefix(self):
         return get_ticket().prefix
@@ -26,7 +26,7 @@ class EtcdClient:
         self.client = None
         self.client_failed = False
         self.cont = True
-        
+
         etcd_list = get_ticket().etcd
         if len(etcd_list) == 1:
             host, port = etcd_list[0].split(':')
@@ -36,7 +36,11 @@ class EtcdClient:
                 allow_reconnect=True,
                 allow_redirect=True)
         else:
-            host = tuple(tuple(e.split(':'))
+            def split_addr(e):
+                host, port = e.split(':')
+                return host, int(port)
+
+            host = tuple(split_addr(e)
                          for e in etcd_list)
             self.client = etcd.Client(
                 host=host,
@@ -124,7 +128,7 @@ class SimpleLock:
         for key, u in cls.lock_keys.items():
             await client.delete(key)
         cls.lock_keys = {}
-                             
+
     async def __aenter__(self):
         return await self.acquire()
 
@@ -149,7 +153,7 @@ class SimpleLock:
         r = await self.client.write(self.path, self.uuid, ttl=5, append=True)
         self.key = r.key
         self.lock_keys[r.key] = self.uuid
-        asyncio.ensure_future(self.keep_key())        
+        asyncio.ensure_future(self.keep_key())
         await self.wait_key()
         return self
 
@@ -166,7 +170,7 @@ class SimpleLock:
             for n in self.walk(r):
                 if n.value == self.uuid:
                     await self.client.delete(n.key)
-                    
+
         self._acquired = False
         self.cont = False
 
@@ -195,7 +199,7 @@ class SimpleLock:
                 self._acquired = True
                 return True
         return False
-        
+
     async def wait_key(self):
         while self.cont and not (await self.check_acquired()):
             try:
