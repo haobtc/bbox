@@ -8,7 +8,7 @@ setup(name='aiobbox',
       author_email='zk@bixin.com',
       packages=[
           'aiobbox',
-          'aibbox.tools',
+          'aiobbox.tools',
           'aiobbox.cluster',
           'aiobbox.services',
           'aiobbox.contrib.consumer',
