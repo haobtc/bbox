@@ -49,6 +49,7 @@ class ClientAgent(EtcdClient):
                     continue
                 if not v.value:
                     logging.warn('v has no value %s', v)
+                    continue
                 box_info = json.loads(v.value)
                 bind = box_info['bind']
                 boxes[bind] = box_info
