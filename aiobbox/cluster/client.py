@@ -12,6 +12,8 @@ from aiobbox.exceptions import RegisterFailed, ETCDError
 from .etcd_client import EtcdClient
 from .cfg import SharedConfig, get_sharedconfig
 
+logger = logging.getLogger('bbox')
+
 class ClientAgent(EtcdClient):
     def __init__(self):
         super(ClientAgent, self).__init__()
@@ -37,7 +39,7 @@ class ClientAgent(EtcdClient):
 
     async def get_boxes(self, chg=None):
         if chg:
-            logging.debug('get boxes on change %s', chg)
+            logger.debug('get boxes on change %s', chg)
         new_route = defaultdict(list)
         boxes = {}
         try:
@@ -48,7 +50,7 @@ class ClientAgent(EtcdClient):
                 if not m:
                     continue
                 if not v.value:
-                    logging.warn('v has no value %s', v)
+                    #logger.warn('v has no value %s', v)
                     continue
                 box_info = json.loads(v.value)
                 bind = box_info['bind']
@@ -111,7 +113,7 @@ class ClientAgent(EtcdClient):
         try:
             await self.delete(etcd_key, recursive=True)
         except etcd.EtcdKeyNotFound:
-            logging.debug(
+            logger.debug(
                 'key %s not found on delete', etcd_key)
 
     async def get_configs(self, chg=None):

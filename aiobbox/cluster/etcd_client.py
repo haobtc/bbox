@@ -10,6 +10,8 @@ from collections import defaultdict
 from aiobbox.exceptions import ETCDError
 from .ticket import get_ticket
 
+logger = logging.getLogger('bbox')
+
 class EtcdClient:
     def path(self, p):
         cfg = get_ticket()
@@ -59,13 +61,13 @@ class EtcdClient:
             self.client_failed = False
             return r
         except aiohttp.ClientError as e:
-            logging.warn('http client error', exc_info=True)
+            logger.warn('http client error', exc_info=True)
             self.client_failed = True
             raise ETCDError
         except etcd.EtcdConnectionFailed:
             #import traceback
             #traceback.print_exc()
-            logging.warn('connection failed')
+            logger.warn('connection failed')
             self.client_failed = True
             raise ETCDError
 
@@ -95,7 +97,7 @@ class EtcdClient:
 
     async def watch_changes(self, component, changed):
         while self.cont:
-            logging.debug('watching %s', component)
+            logger.debug('watching %s', component)
             try:
                 # watch every 1 min to
                 # avoid timeout exception
@@ -106,11 +108,11 @@ class EtcdClient:
                     timeout=60)
                 await changed(chg)
             except asyncio.TimeoutError:
-                logging.debug(
+                logger.debug(
                     'timeout error during watching %s',
                     component)
             except ETCDError:
-                logging.warn('etcd error, sleep for a while')
+                logger.warn('etcd error, sleep for a while')
                 await asyncio.sleep(1)
             await changed(None)
 

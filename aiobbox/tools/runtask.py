@@ -12,6 +12,8 @@ from aiobbox.handler import BaseHandler
 
 config_log()
 
+logger = logging.getLogger('bbox')
+
 parser = argparse.ArgumentParser(
     prog='bbox run',
     description='run bbox tasks')
@@ -39,7 +41,7 @@ async def main():
     try:
         await get_cluster().start()
         r = await handler.run(args)
-        logging.info('task return %s', r)
+        logger.info('task return %s', r)
     finally:
         c = get_cluster()
         c.cont = False

@@ -12,6 +12,8 @@ from aiobbox.exceptions import ConnectionError, Retry
 from aiobbox.utils import get_cert_ssl_context
 from aiobbox.server import has_service, Request
 
+logger = logging.getLogger('bbox')
+
 try:
     import selectors
 except ImportError:
@@ -80,7 +82,7 @@ class WebSocketClient:
 
     async def connect(self):
         if self.ws:
-            logging.debug('connect to %s already connected',
+            logger.debug('connect to %s already connected',
                           self.url_prefix)
             return
 
@@ -89,7 +91,7 @@ class WebSocketClient:
             ws = await self.session.ws_connect(url, autoclose=False, autoping=False, heartbeat=1.0)
             self.ws = ws
         except OSError:
-            logging.warn('connect to %s failed', url)
+            logger.warn('connect to %s failed', url)
 
     async def request(self, srv, method, *params, req_id=None):
         if not self.connected:
@@ -147,11 +149,11 @@ class WebSocketClient:
             elif msg.type == aiohttp.WSMsgType.CLOSE:
                 return await self.onclosed()
             elif msg.type == aiohttp.WSMsgType.ERROR:
-                logging.debug('error during received %s',
+                logger.debug('error during received %s',
                               self.ws.exception() if self.ws else None)
                 return await self.onclosed()
             elif msg.type == aiohttp.WSMsgType.CLOSED:
-                logging.debug('websocket closed')
+                logger.debug('websocket closed')
                 return
 
             req_id = data.get('id')
@@ -161,9 +163,9 @@ class WebSocketClient:
                     del self.waiters[req_id]
                     await channel.put(data)
                 else:
-                    logging.warn('Cannot find channel by id ', req_id)
+                    logger.warn('Cannot find channel by id ', req_id)
             else:
-                logging.debug('no reqid seems a notify', data)
+                logger.debug('no reqid seems a notify', data)
 
 class MethodRef:
     def __init__(self, name, srv_ref):
@@ -210,7 +212,7 @@ class FullConnectPool:
 
         for bind, client in list(self.pool.items()):
             if bind not in agent.boxes:
-                logging.warning('remove box %s', bind)
+                logger.warn('remove box %s', bind)
                 # remove box due to server done
                 client.close()
                 del self.pool[bind]

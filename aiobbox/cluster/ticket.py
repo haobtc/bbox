@@ -1,7 +1,6 @@
 import re, os
 import time
 import json
-import logging
 import sys
 from aiobbox.utils import abs_path, home_path, localbox_ip
 import aiobbox.testing as testing

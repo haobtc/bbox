@@ -11,6 +11,8 @@ from .etcd_client import EtcdClient
 from .ticket import get_ticket
 from .cfg import get_sharedconfig
 
+logger = logging.getLogger('bbox')
+
 BOX_TTL = 10
 
 class BoxAgent(EtcdClient):
@@ -74,7 +76,7 @@ class BoxAgent(EtcdClient):
             except ETCDError:
                 await asyncio.sleep(0.1)
             except etcd.EtcdAlreadyExist:
-                logging.warn(
+                logger.warn(
                     'register key conflict {}'.format(key))
                 await asyncio.sleep(0.1)
 
@@ -97,20 +99,20 @@ class BoxAgent(EtcdClient):
             if not self.cont:
                 break
             if not self.client or not self.bind:
-                logging.debug('etcd client or bind are empty')
+                logger.debug('etcd client or bind are empty')
             else:
                 key = self.path('boxes/{}'.format(self.bind))
                 try:
                     await self.refresh(key, ttl=BOX_TTL)
                 except etcd.EtcdKeyNotFound:
-                    logging.warn('etcd key not found %s', key)
+                    logger.warn('etcd key not found %s', key)
                     value = self.box_info()
                     try:
                         await self.write(key, value, ttl=BOX_TTL)
                     except ETCDError:
-                        logging.warn('etc error on write')
+                        logger.warn('etc error on write')
                 except ETCDError:
-                    logging.warn('etcd error on refresh')
+                    logger.warn('etcd error on refresh')
 
 _agent = BoxAgent()
 def get_box():

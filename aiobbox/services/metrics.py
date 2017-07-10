@@ -15,6 +15,8 @@ from aiobbox.client import HttpClient
 from aiobbox.metrics import collect_cluster_metrics, report_box_failure
 from aiobbox.handler import BaseHandler
 
+logger = logging.getLogger('bbox')
+
 export_cluster = False
 collect_localbox = False
 
@@ -30,7 +32,7 @@ async def get_box_metrics(connect):
         url = urljoin(client.url_prefix, '/metrics.json')
         resp = await client.session.get(url)
     except ClientConnectionError:
-        logging.error('client connection error to %s', bind)
+        logger.error('client connection error to %s', bind)
         return report_box_failure(bind)
     return await resp.json()
 

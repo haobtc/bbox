@@ -13,6 +13,8 @@ from aiobbox.handler import BaseHandler
 
 config_log()
 
+logger = logging.getLogger('bbox')
+
 parser = argparse.ArgumentParser(
     prog='bbox httpd',
     description='start bbox python project')
@@ -64,7 +66,7 @@ async def main():
     http_handler = http_app.make_handler()
 
     host, port = args.bind.split(':')
-    logging.warn('httpd starts at %s', args.bind)
+    logger.warn('httpd starts at %s', args.bind)
     loop = asyncio.get_event_loop()
     await loop.create_server(http_handler,
                              host, port,

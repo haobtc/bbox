@@ -16,6 +16,8 @@ from aiobbox import stats
 DEBUG = True
 srv_dict = {}
 
+logger = logging.getLogger('bbox')
+
 def has_service(srv):
     return srv in srv_dict
 
@@ -29,7 +31,7 @@ class Service(object):
 
     def register(self, srv_name):
         if srv_name in srv_dict:
-            logging.warn('srv {} already exist'.format(srv_name))
+            logger.warn('srv {} already exist'.format(srv_name))
         srv_dict[srv_name] = self
 
     def method(self, name, for_test=False):
@@ -40,7 +42,7 @@ class Service(object):
                 return fn
             __w = wraps(fn)(fn)
             if name in self.methods:
-                logging.warn('method {} already exist'.format(name))
+                logger.warn('method {} already exist'.format(name))
             self.methods[name] = MethodRef(__w)
             return __w
         return decorator
@@ -101,7 +103,7 @@ class Request:
                 'message': getattr(e, 'message', str(e)),
                 'code': e.code
             }
-            logging.warn(
+            logger.warn(
                 'service error on JSON-RPC id %s',
                 self.req_id,
                 exc_info=True)
@@ -110,7 +112,7 @@ class Request:
                     'result': None}
         except Exception as e:
             import traceback
-            logging.error('error on JSON-RPC id %s',
+            logger.error('error on JSON-RPC id %s',
                           self.req_id,
                           exc_info=True)
 
@@ -202,7 +204,7 @@ async def start_server(args):
     app.router.add_get('/', index)
 
     host, port = curr_box.bind.split(':')
-    logging.warn('box {} launched as {}'.format(
+    logger.warn('box {} launched as {}'.format(
         curr_box.boxid,
         curr_box.bind))
     handler = app.make_handler()
