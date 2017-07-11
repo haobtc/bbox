@@ -11,20 +11,26 @@ from aiobbox.client import pool
 from aiobbox.exceptions import ConnectionError
 from aiobbox.handler import BaseHandler
 
+logger = logging.getLogger('bbox')
+
 _whitelist = None
+
 # proxy server
 async def handle_rpc(request):
     body = await request.json()
     if ('method' not in body
         or not isinstance(body['method'], str)):
+        logger.warn('bad request for for body %s', body)
         return web.HTTPBadRequest()
 
     m = parse_method(body['method'])
     if not m:
+        logger.warn('parse method error %s', body)
         return web.HTTPBadRequest()
 
     if _whitelist is not None:
         if body['method'] not in _whitelist:
+            logger.warn('method not in _whitelist')
             return web.HTTPForbidden()
 
     # TODO: srv::method white list
@@ -36,6 +42,7 @@ async def handle_rpc(request):
                                *params,
                                req_id=body.get('id'))
     except ConnectionError:
+        logger.warn('connect error on request srv %s, method %s', srv, method)
         return web.HTTPBadGateway()
     return web.json_response(r)
 
