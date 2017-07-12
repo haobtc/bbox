@@ -13,7 +13,7 @@ from aiobbox.utils import parse_int
 srv = Service()
 
 @srv.method('createConsumer')
-async def create_consumer(request, consumer):
+async def create_consumer(request, consumer, reuse):
     '''
     Create a consumer for test
     -----
@@ -41,8 +41,14 @@ async def create_consumer(request, consumer):
 
     cfg = get_sharedconfig()
     coptions = cfg.get('consumers', consumer)
-    if coptions:
-        raise ServiceError('consumer already exist')
+    #if coptions:
+    #    raise ServiceError('consumer already exist',
+    #                       msg='already exist {}'.format(coptions))
+    if coptions and reuse:
+        return {
+            'consumer': consumer,
+            'secret': coptions['secret']
+        }
 
     coptions = {}
     coptions['secret'] = uuid.uuid4().hex
