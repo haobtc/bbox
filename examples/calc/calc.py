@@ -37,7 +37,7 @@ async def web(request, webreq):
         a = d.get(key)
         if a:
             return a[0]
-        
+
     path = webreq['path']
     r = urlparse.parse_qs(webreq.get('qs', ''))
     a = getval(r, 'a')

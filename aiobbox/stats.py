@@ -13,13 +13,13 @@ class RPCRequestCount:
         else:
             self.help = help
         self.values = defaultdict(int)
-        
+
     def incr(self, endpoint, v=1):
         self.values[endpoint] += v
 
     def setv(self, endpoint, v):
         self.values[endpoint] = v
-        
+
     async def collect(self):
         arr = [({'endpoint': k}, v)
                for k, v in self.values.items()]

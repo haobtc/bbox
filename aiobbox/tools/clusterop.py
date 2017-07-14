@@ -25,7 +25,7 @@ subp = parser.add_subparsers()
 p = subp.add_parser('info')
 p.add_argument('--tic', type=str)
 p.set_defaults(func=cluster_info)
-    
+
 async def main():
     args = parser.parse_args()
     await get_cluster().start()
@@ -40,4 +40,4 @@ async def main():
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
-            
+

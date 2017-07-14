@@ -167,7 +167,7 @@ class ServiceRef:
 
     def __getattr__(self, name):
         return MethodRef(name, self)
-                
+
 class Client:
     def __init__(self, url_prefix):
         if url_prefix.startswith('http'):
@@ -181,4 +181,4 @@ class Client:
 
     def __getitem__(self, name):
         return ServiceRef(name, self)
-            
+

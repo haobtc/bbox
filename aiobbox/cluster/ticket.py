@@ -2,30 +2,22 @@ import re, os
 import time
 import json
 import sys
-from aiobbox.utils import abs_path, home_path, localbox_ip
+from aiobbox.utils import get_bbox_path, localbox_ip
+
 import aiobbox.testing as testing
 
 class Ticket:
     def __init__(self):
         self.data = {}
 
-    def load(self, config_path=None):
-        config_path_list = []
-        if config_path is not None:
-            config_path_list.append(config_path)
-
-        config_path_list.append(abs_path(
-            'bbox.ticket.json'))
-        config_path_list.append(home_path(
-            '.bbox/ticket.json'))
-
-        for path in config_path_list:
-            if os.path.exists(path):
-                with open(path, 'r', encoding='utf-8') as f:
-                    kw = json.load(f)
-                    self.update(**kw)
-                    self.update(loadtime=int(time.time()))
-                    break
+    def load(self):
+        path = get_bbox_path('ticket.json')
+        if path:
+            with open(path, 'r', encoding='utf-8') as f:
+                kw = json.load(f)
+                self.update(**kw)
+                self.update(loadtime=int(time.time()))
+                break
 
     def update(self, **kw):
         if 'prefix' in kw and testing.test_mode:

@@ -54,7 +54,7 @@ async def load_config(args):
         value = json.loads(value)
         print("set", sec, key)
         await get_cluster().set_config(sec, key, value)
-    
+
 parser = argparse.ArgumentParser(prog='bbox config')
 subp = parser.add_subparsers()
 p = subp.add_parser('get', help='get config')
@@ -106,7 +106,7 @@ p.set_defaults(func=del_config)
 
 async def main():
     args = parser.parse_args()
-    await get_cluster().start()    
+    await get_cluster().start()
     try:
         await args.func(args)
     finally:

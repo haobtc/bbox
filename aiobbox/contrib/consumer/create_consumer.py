@@ -32,7 +32,7 @@ class Handler(BaseHandler):
 
         c = get_cluster()
         await c.set_config('consumers', consumer, coptions)
-        
+
         # TODO: limit the consumer size
 
         print('secret for', consumer, coptions['secret'])

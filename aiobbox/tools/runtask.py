@@ -36,7 +36,7 @@ async def main():
     else:
         handler = BaseHandler()
     handler.add_arguments(parser)
-    args = parser.parse_args()    
+    args = parser.parse_args()
 
     try:
         await get_cluster().start()
@@ -54,4 +54,4 @@ if __name__ == '__main__':
         loop.run_until_complete(main())
     except KeyboardInterrupt:
         pass
-        
+

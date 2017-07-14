@@ -23,7 +23,7 @@ class SharedConfig:
 
     def delete_section(self, sec):
         return self.sections.pop(sec, None)
-        
+
     def get(self, sec, key, default=None):
         section = self.sections.get(sec)
         if section:
@@ -46,14 +46,14 @@ class SharedConfig:
 
     def get_section_strict(self, sec):
         return self.sections[sec]
-    
+
     def has_section(self, sec):
         return sec in self.sections
 
     def has_key(self, sec, key):
         return (self.has_section(sec) and
                 key in self.sections[sec])
-    
+
     def items(self, sec):
         return self.sections[sec].items()
 

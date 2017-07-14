@@ -18,7 +18,7 @@ BOX_TTL = 10
 class BoxAgent(EtcdClient):
     def __init__(self):
         super(BoxAgent, self).__init__()
-        self.ssl_prefix = None        
+        self.ssl_prefix = None
         self.started = False
 
     async def start(self, boxid, srv_names):

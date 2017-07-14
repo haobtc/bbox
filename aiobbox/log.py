@@ -39,7 +39,7 @@ def config_log(mute_console=None):
     logging_config = LOGGING.copy()
 
     handlers = ['syslog']
-    
+
     if mute_console is None:
         mute_console = (
             os.getenv('BBOX_LOG_MUTE', '').lower()

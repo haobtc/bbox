@@ -83,12 +83,23 @@ def get_localbox_ipset():
 def localbox_ip(*iplist):
     return get_localbox_ipset().intersection(set(iplist))
 
+
+def get_bbox_path(path):
+    rel_path = '.bbox/{}'.format(path)
+    for path in [abs_path(rel_path),
+                 home_path(rel_path)]:
+        if os.path.exists(path):
+            return path
+
 def get_ssl_context(ssl_prefix):
     if ssl_prefix:
-        ssl_cert = abs_path(
+        ssl_cert = get_bbox_path(
             'certs/{}/{}.crt'.format(ssl_prefix, ssl_prefix))
-        ssl_key = abs_path(
+        assert ssl_cert
+
+        ssl_key = get_bbox_path(
             'certs/{}/{}.key'.format(ssl_prefix, ssl_prefix))
+        assert ssl_key
         ssl_context = ssl.create_default_context(
             purpose=ssl.Purpose.CLIENT_AUTH)
         #ssl_context.verify_mode = ssl.CERT_REQUIRED
@@ -98,8 +109,9 @@ def get_ssl_context(ssl_prefix):
 
 def get_cert_ssl_context(ssl_prefix):
     if ssl_prefix:
-        ssl_cert = abs_path(
+        ssl_cert = get_bbox_path(
             'certs/{}/{}.crt'.format(ssl_prefix, ssl_prefix))
+        assert ssl_cert
         ssl_context = ssl.create_default_context(
             purpose=ssl.Purpose.CLIENT_AUTH,
             cafile=ssl_cert)

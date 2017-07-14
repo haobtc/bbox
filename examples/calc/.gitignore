@@ -1,5 +1,5 @@
 *.pyc
 certs
-bbox.ticket.json
+.bbox
 tmp
 .DS_Store

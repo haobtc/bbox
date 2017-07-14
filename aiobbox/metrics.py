@@ -66,5 +66,3 @@ def report_box_failure(bind):
         'meta': meta,
         'lines': lines
         }
-    
-        

@@ -27,7 +27,7 @@ async def main():
         await get_cluster().start()
     except ETCDError:
         return
-    
+
     c = get_cluster()
     try:
         async with c.acquire_lock(args.entry) as lock:
@@ -44,7 +44,7 @@ async def main():
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-    normal = True    
+    normal = True
     try:
         loop.run_until_complete(main())
     except KeyboardInterrupt:

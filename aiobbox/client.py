@@ -269,7 +269,7 @@ class FullConnectPool:
                 'method': '{}::{}'.format(srv, method)
             })
             return await req.handle()
-        
+
         for rty in range(retry + 1):
             try:
                 return await self._request(srv, method,

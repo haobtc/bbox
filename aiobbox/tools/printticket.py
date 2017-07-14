@@ -21,6 +21,6 @@ def main():
     except KeyError:
         # Failed to find the key
         sys.exit(1)
-        
+
 if __name__ == '__main__':
     main()

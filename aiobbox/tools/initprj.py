@@ -20,13 +20,17 @@ parser.add_argument(
 def main():
     args = parser.parse_args()
 
-    config_file = os.path.join(os.getcwd(), 'bbox.ticket.json')
+    bbox_dir = os.path.join(os.getcwd(), '.bbox')
+    config_file = os.path.join(bbox_dir, 'ticket.json')
     gitignore_file = os.path.join(os.getcwd(), '.gitignore')
 
     if os.path.exists(config_file):
         print('project already initialized!',
               file=sys.stderr)
         sys.exit(1)
+
+    if not os.path.exists(bbox_dir):
+        os.makedirs(bbox_dir)
 
     prjname = os.path.basename(os.getcwd())
 
