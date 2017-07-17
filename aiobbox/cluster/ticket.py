@@ -17,7 +17,6 @@ class Ticket:
                 kw = json.load(f)
                 self.update(**kw)
                 self.update(loadtime=int(time.time()))
-                break
 
     def update(self, **kw):
         if 'prefix' in kw and testing.test_mode:

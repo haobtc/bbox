@@ -96,6 +96,7 @@ class EtcdClient:
                 yield cc
 
     async def watch_changes(self, component, changed):
+        last_index = None
         while self.cont:
             logger.debug('watching %s', component)
             try:
@@ -104,8 +105,10 @@ class EtcdClient:
                 chg = await asyncio.wait_for(
                     self.read(self.path(component),
                               recursive=True,
+                              waitIndex=last_index,
                               wait=True),
                     timeout=60)
+                last_index = chg.modifiedIndex
                 await changed(chg)
             except asyncio.TimeoutError:
                 logger.debug(
@@ -215,7 +218,6 @@ class SimpleLock:
                 continue
             except asyncio.TimeoutError:
                 continue
-
             if (chg.action not in ('delete', 'expire')
                 or chg.key > self.key):
                 # not interest
