@@ -14,7 +14,7 @@ LOGGING = {
         'syslog': {
             'class': 'logging.handlers.SysLogHandler',
             'formatter': 'simple',
-            'address':  ('localhost', 514),
+            'address':  (os.getenv('BBOX_SYSLOG_DEST', 'localhost'), 514),
             'facility': 'user',
         }
     },
