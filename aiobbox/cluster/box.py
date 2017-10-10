@@ -28,15 +28,16 @@ class BoxAgent(EtcdClient):
         self.boxid = boxid
         self.srv_names = srv_names
         self.bind = None
+        self.extbind = None
         self.connect()
         await self.register()
         self.started = True
 
 
-    def box_info(self, bind=None):
-        bind = bind or self.bind
+    def box_info(self, extbind=None):
+        extbind = extbind or self.extbind
         return json_to_str({
-            'bind': bind,
+            'bind': extbind,
             'ssl': self.ssl_prefix,
             'boxid': self.boxid,
             'services': self.srv_names})
@@ -57,20 +58,23 @@ class BoxAgent(EtcdClient):
 
             port_range = self.get_box_config(
                 'port_range',
-                default=[30000, 31000])
+                default=cfg.port_range)
 
             assert port_range[0] < port_range[1]
             port = random.randrange(*port_range)
-            bind = '{}:{}'.format(cfg.bind_ip,
-                                  port)
 
-            key = self.path('boxes/{}'.format(bind))
-            value = self.box_info(bind)
+            extbind = cfg.extbind
+            if not extbind:
+                extbind = '{}:{}'.format(cfg.bind_ip, port)
+
+            key = self.path('boxes/{}'.format(extbind))
+            value = self.box_info(extbind=extbind)
             try:
                 await self.write(key, value,
                                  ttl=BOX_TTL,
                                  prevExist=False)
-                self.bind = bind
+                self.extbind = extbind
+                self.bind = '{}:{}'.format(cfg.bind_ip, port)
                 asyncio.ensure_future(self.update())
                 return
             except ETCDError:

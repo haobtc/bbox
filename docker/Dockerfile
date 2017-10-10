@@ -10,6 +10,6 @@ EXPOSE 30000
 WORKDIR /root/
 
 ADD run.sh run.sh
-ADD get_local_ip.py get_local_ip.py
+#ADD get_local_ip.py get_local_ip.py
 
 ENTRYPOINT ["/root/run.sh"]

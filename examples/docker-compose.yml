@@ -4,13 +4,14 @@ services:
     image: 'haobtc/bbox:0.1.1'
     build: '../docker'
     ports:
-      - "30000:30000"
+      - "31000:30000"
     restart: always
     hostname: calc
     environment:
       BBOX_ETCD: "HOST:2379"
       BBOX_CMD: 'start calc'
       BBOX_PREFIX: 'bboxcalc'
+      BBOX_EXTBIND: 'HOSTIP:31000'
     volumes:
       - ./calc:/code:ro
 
