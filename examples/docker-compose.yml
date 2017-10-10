@@ -1,0 +1,27 @@
+version: '3'
+services:
+  calc:
+    image: 'haobtc/bbox:0.1.1'
+    build: '../docker'
+    ports:
+      - "30000:30000"
+    restart: always
+    hostname: calc
+    environment:
+      BBOX_ETCD: "HOST:2379"
+      BBOX_CMD: 'start calc'
+      BBOX_PREFIX: 'bboxcalc'
+    volumes:
+      - ./calc:/code:ro
+
+  etcd:
+    image: "xieyanze/etcd3"
+    ports:
+      - "2379:2379"
+      - "2378:2378"
+    restart: always
+    volumes:
+      - /data/etcd:/data
+    
+      
+      

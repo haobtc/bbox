@@ -5,7 +5,6 @@ from aiobbox.server import Service, ServiceError, Request
 from aiobbox.cluster import get_box
 
 srv = Service()
-@runtime_validation
 def _add2num(a:int, b:int) -> int:
     return a + b
 
