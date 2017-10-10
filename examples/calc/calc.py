@@ -3,7 +3,6 @@ import asyncio
 import urllib.parse as urlparse
 from aiobbox.server import Service, ServiceError, Request
 from aiobbox.cluster import get_box
-from enforce import runtime_validation
 
 srv = Service()
 @runtime_validation

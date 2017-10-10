@@ -27,7 +27,7 @@ class Ticket:
     def validate(self):
         assert re.match(r'[0-9a-zA-Z\_\.\-\+]+$', self.prefix)
         # TODO: add more roles
-        assert localbox_ip(self.bind_ip)
+        #assert localbox_ip(self.bind_ip)
 
     def keys(self):
         return self.data.keys()

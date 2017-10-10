@@ -9,7 +9,7 @@ from functools import wraps
 from aiobbox import testing
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.exceptions import ServiceError
-from aiobbox.utils import parse_method, get_ssl_context
+from aiobbox.utils import parse_method, get_ssl_context, localbox_ip
 from aiobbox.metrics import collect_metrics
 from aiobbox import stats
 
@@ -204,6 +204,8 @@ async def start_server(args):
     app.router.add_get('/', index)
 
     host, port = curr_box.bind.split(':')
+    if not localbox_ip(host):
+        host = '0.0.0.0'
     logger.warn('box {} launched as {}'.format(
         curr_box.boxid,
         curr_box.bind))

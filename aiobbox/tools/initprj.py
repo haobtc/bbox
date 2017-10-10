@@ -75,12 +75,14 @@ def main():
     port_range = os.getenv('BBOX_PORT_RANGE', '30000-31000')
     port_range = [int(p) for p in port_range.split('-', 1)]
 
+    bind_ip = os.getenv('BBOX_BIND_IP', '127.0.0.1')
+
     config_json = {
         'name': prjname,
         'etcd': etcd,
         'prefix': prefix,
         'language': lang,
-        'bind_ip': '127.0.0.1',
+        'bind_ip': bind_ip,
         'port_range': port_range
         }
     with open(config_file, 'w', encoding='utf-8') as f:
