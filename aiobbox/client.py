@@ -38,6 +38,7 @@ class HttpClient:
 
         method = srv + '::' + method
         payload = {
+            'jsonrpc': '2.0',
             'id': uuid.uuid4().hex,
             'method': method,
             'params': params
@@ -104,6 +105,7 @@ class WebSocketClient:
         if not req_id:
             req_id = uuid.uuid4().hex
         payload = {
+            'jsonrpc': '2.0',
             'id': req_id,
             'method': method,
             'params': params

@@ -6,23 +6,35 @@ import argparse
 parser = argparse.ArgumentParser(
     prog='bbox init',
     description='init a bbox project')
+
 parser.add_argument(
     '--language',
     type=str,
-    default='python3',
     help='the language, default is python3')
+
+parser.add_argument(
+    '--home',
+    type=bool,
+    default=False,
+    help='init to home dir or work dir')
+
 parser.add_argument(
     '--prefix',
     type=str,
-    default='',
     help='cluster prefix, a cluster of boxes share the prefix')
 
 def main():
     args = parser.parse_args()
 
-    bbox_dir = os.path.join(os.getcwd(), '.bbox')
-    config_file = os.path.join(bbox_dir, 'ticket.json')
-    gitignore_file = os.path.join(os.getcwd(), '.gitignore')
+    if args.home:
+        home_dir = os.getenv('HOME')
+        bbox_dir = os.path.join(home_dir, '.bbox')
+        config_file = os.path.join(bbox_dir, 'ticket.json')
+        gitignore_file = ''
+    else:
+        bbox_dir = os.path.join(os.getcwd(), '.bbox')
+        config_file = os.path.join(bbox_dir, 'ticket.json')
+        gitignore_file = os.path.join(os.getcwd(), '.gitignore')
 
     if os.path.exists(config_file):
         print('project already initialized!',
@@ -32,9 +44,14 @@ def main():
     if not os.path.exists(bbox_dir):
         os.makedirs(bbox_dir)
 
-    prjname = os.path.basename(os.getcwd())
+    prjname = os.getenv('BBOX_PRJNAME')
+    if not prjname:
+        prjname = os.path.basename(os.getcwd())
 
     lang = args.language
+    if not lang:
+        lang = os.getenv('BBOX_LANGUAGE', 'python3')
+
     if lang not in ('python3', 'python'):
         print('language {} not supported'.format(lang),
               file=sys.stderr)
@@ -43,17 +60,29 @@ def main():
     if lang == 'python':
         lang = 'python3'
 
+    prefix = args.prefix
+    if not prefix:
+        prefix = os.getenv('BBOX_PREFIX')
+    if not prefix:
+        prefix = uuid.uuid4().hex
+
+    etcd = os.getenv('BBOX_ETCD')
+    if etcd:
+        etcd = etcd.split(',')
+    if not etcd:
+        etcd = ['127.0.0.1:2379']
+
     config_json = {
         'name': prjname,
-        'etcd': ['127.0.0.1:2379'],
-        'prefix': args.prefix or uuid.uuid4().hex,
+        'etcd': etcd,
+        'prefix': prefix,
         'language': lang,
         'bind_ip': '127.0.0.1'
         }
     with open(config_file, 'w', encoding='utf-8') as f:
         json.dump(config_json, f, indent=2, sort_keys=True)
 
-    if not os.path.exists(gitignore_file):
+    if gitignore_file and not os.path.exists(gitignore_file):
         lines = [
             '*.pyc',
             'node_modules/',
