@@ -109,13 +109,13 @@ async def create_consumer_token(request, consumer, secret, options=None):
 
     expire_at = int(time.time() + expire_in)
     nonce = uuid.uuid4().hex
-    digest_src = '|'.join([
+    digest_src = ':'.join([
         consumer, str(expire_at),
         nonce, coptions['seed']])
     m = sha256()
     m.update(digest_src.encode('utf-8'))
     digest = m.hexdigest()
-    token = '|'.join([consumer,
+    token = ':'.join([consumer,
                       str(expire_at),
                       nonce, digest])
     return {
@@ -126,7 +126,7 @@ async def create_consumer_token(request, consumer, secret, options=None):
 
 @srv.method('verifyToken')
 async def verify_consumer_token(request, token):
-    arr = token.split('|')
+    arr = token.split(':')
     if len(arr) != 4 or re.search(r'\s', token):
         raise ServiceError('invalid token',
                            'token {}'.format(token))
@@ -140,7 +140,7 @@ async def verify_consumer_token(request, token):
     if int(expire_at) < time.time():
         raise ServiceError('token expired')
 
-    digest_src = '|'.join([
+    digest_src = ':'.join([
         consumer, expire_at,
         nonce, coptions['seed']])
     m = sha256()
@@ -156,4 +156,3 @@ async def verify_consumer_token(request, token):
         }
 
 srv.register('bbox.consumer')
-

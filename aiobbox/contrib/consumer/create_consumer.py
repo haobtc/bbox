@@ -24,7 +24,11 @@ class Handler(BaseHandler):
         cfg = get_sharedconfig()
         coptions = cfg.get('consumers', consumer)
         if coptions:
-            raise Exception('consumer already exist')
+            print(
+                'consumer {} already exist, secret is {}'.format(
+                consumer, coptions['secret']))
+            return
+
 
         coptions = {}
         coptions['secret'] = uuid.uuid4().hex

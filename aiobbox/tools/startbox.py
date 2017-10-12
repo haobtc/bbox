@@ -39,6 +39,7 @@ async def main():
     if cfg.language != 'python3':
         print('language must be python3', file=sys.stderr)
         sys.exit(1)
+
     args, _ = parser.parse_known_args()
     if not args.boxid:
         args.boxid = uuid.uuid4().hex
