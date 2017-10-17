@@ -94,7 +94,8 @@ class Request:
             res = await method_ref.fn(self, *self.params)
             resp = {'result': res,
                     'id': self.req_id,
-                    'error': None}
+                    'error': None,
+                    'jsonrpc': '2.0'}
             end_time = time.time()
             if end_time - start_time > 1.0:
                 stats.slow_rpc_request_count.incr(stats_name)
@@ -107,9 +108,11 @@ class Request:
                 'service error on JSON-RPC id %s',
                 self.req_id,
                 exc_info=True)
-            resp = {'error': error_info,
-                    'id': self.req_id,
-                    'result': None}
+            resp = {
+                'jsonrpc': '2.0',
+                'error': error_info,
+                'id': self.req_id,
+                'result': None}
         except Exception as e:
             import traceback
             logger.error('error on JSON-RPC id %s',
@@ -132,6 +135,7 @@ class Request:
                 error_info['stack'] = traceback.format_exc()
             resp = {'error': error_info,
                     'id': self.req_id,
+                    'jsonrpc': '2.0',
                     'result': None}
         return resp
 
