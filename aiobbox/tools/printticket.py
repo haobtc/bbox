@@ -3,24 +3,17 @@ import json
 import argparse
 from aiobbox.cluster import get_ticket
 from aiobbox.log import config_log
+from aiobbox.handler import BaseHandler
 
 config_log(mute_console=True)
 
-parser = argparse.ArgumentParser(
-    description='start bbox python project')
+class Handler(BaseHandler):
+    help = 'print ticket info'
+    def add_arguments(self, parser):
+        parser.add_argument(
+            'key',
+            type=str,
+            help='print key')
 
-parser.add_argument(
-    'key',
-    type=str,
-    help='print key')
-
-def main():
-    args = parser.parse_args()
-    try:
+    async def run(self, args):
         print(get_ticket()[args.key])
-    except KeyError:
-        # Failed to find the key
-        sys.exit(1)
-
-if __name__ == '__main__':
-    main()

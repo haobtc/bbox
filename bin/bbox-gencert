@@ -1,0 +1,35 @@
+#!/bin/bash
+
+function genkey() {
+    # refer to https://devcenter.heroku.com/articles/ssl-certificate-self
+    prefix=$1
+    if [ -z $prefix ]; then
+        echo -e "\033[31myou must provide a cert prefix, ie. server\033[0m" >&2
+        exit 1
+    fi
+    cert_root=./.bbox/certs/$prefix
+
+    mkdir -p $cert_root
+    if [ -f $cert_root/$prefix.key ]; then
+        echo -e "\033[31mThe private key $cert_root/$prefix.key already exist! It is dangrous to overwrite it.\033[0m" >&2
+        exit 1
+    fi
+    cd $cert_root
+
+    echo generating privkey
+    openssl genrsa -des3 -passout pass:x -out $prefix.pass.key 2048
+    openssl rsa -passin pass:x -in $prefix.pass.key -out $prefix.key
+    rm $prefix.pass.key
+    openssl req -new -key $prefix.key -out $prefix.csr
+
+    # make it valid for 10 years
+    openssl x509 -req -sha256 -days 3650 -in $prefix.csr -signkey $prefix.key -out $prefix.crt
+
+    echo '*** Generating p12 ***'
+    openssl pkcs12 -export -in $prefix.crt -inkey $prefix.key -out $prefix.p12
+
+    cd ../..
+    echo keys generated to ./$cert_root
+}
+
+genkey $1

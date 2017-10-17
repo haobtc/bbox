@@ -1,5 +1,8 @@
 #!/bin/bash
 
+echo -e "\033[31mThis command, bbox, is deprecated, use bbox.py instead\033[0m" >&2
+exit 1
+
 export PATH=`dirname $0`:$PATH
 export PYTHONDONTWRITEBYTECODE=1
 export PY3=`which python3`

@@ -6,6 +6,7 @@ import argparse
 import aiobbox.client as bbox_client
 from aiobbox.utils import guess_json, json_pp
 from aiobbox.cluster import get_cluster, get_ticket
+from aiobbox.handler import BaseHandler
 
 config_log()
 
@@ -21,23 +22,24 @@ async def cluster_info(args):
         }
     print(json_pp(info))
 
-subp = parser.add_subparsers()
-p = subp.add_parser('info')
-p.add_argument('--tic', type=str)
-p.set_defaults(func=cluster_info)
+class Handler(BaseHandler):
+    help = 'bbox cluster'
+    def add_arguments(self, parser):
+        subp = parser.add_subparsers()
+        p = subp.add_parser('info')
+        p.add_argument('--tic', type=str)
+        p.set_defaults(func=cluster_info)
 
-async def main():
-    args = parser.parse_args()
-    await get_cluster().start()
-    try:
-        await args.func(args)
-    finally:
-        c = get_cluster()
-        c.cont = False
-        await asyncio.sleep(0.1)
-        c.close()
-
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
-
+    async def run(self, args):
+        await get_cluster().start()
+        func = getattr(args, 'func', None)
+        if func is None:
+            print('bbox.py cluster -h')
+        else:
+            try:
+                await args.func(args)
+            finally:
+                c = get_cluster()
+                c.cont = False
+                await asyncio.sleep(0.1)
+                c.close()

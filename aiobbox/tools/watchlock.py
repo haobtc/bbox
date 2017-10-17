@@ -9,6 +9,7 @@ import aiobbox.client as bbox_client
 from aiobbox.cluster import get_cluster, get_sharedconfig, SimpleLock
 from aiobbox.exceptions import ETCDError
 from aiobbox.utils import guess_json, json_pp
+from aiobbox.handler import BaseHandler
 
 config_log(mute_console=False)
 
@@ -16,41 +17,39 @@ parser = argparse.ArgumentParser(
     prog='bbox lock',
     description='acquire a lock and execute')
 
-parser.add_argument(
-    'entry',
-    type=str,
-    help='lock entry')
+class Handler(BaseHandler):
+    help = 'acquire a lock and execute'
 
-async def main():
-    args, rest_args = parser.parse_known_args()
-    try:
-        await get_cluster().start()
-    except ETCDError:
-        return
+    def add_arguments(self, parser):
+        parser.add_argument(
+            'entry',
+            type=str,
+            help='lock entry')
+        
+        parser.add_argument(
+            'commands',
+            type=str,
+            nargs='*',
+            help='command after the lock is acquired')
 
-    c = get_cluster()
-    try:
+    async def run(self, args):
+        try:
+            await get_cluster().start()
+        except ETCDError:
+            return
+
+        c = get_cluster()
         async with c.acquire_lock(args.entry) as lock:
             if lock.is_acquired and rest_args:
                 proc = await asyncio.create_subprocess_shell(
                     ' '.join(shlex.quote(a)
-                             for a in rest_args))
+                             for a in args.commands))
                 await proc.communicate()
             else:
                 await asyncio.sleep(0.1)
-    finally:
-        pass
-    return True
 
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    normal = True
-    try:
-        loop.run_until_complete(main())
-    except KeyboardInterrupt:
-        normal = False
-    #if not normal:
-    if True:
+    def shutdown(self):
+        loop = asyncio.get_event_loop()        
         c = get_cluster()
         loop.run_until_complete(SimpleLock.close_all_keys(c))
         c.cont = False

@@ -12,62 +12,60 @@ from aiobbox.handler import BaseHandler
 
 config_log()
 
-parser = argparse.ArgumentParser(
-    prog='bbox start',
-    description='start bbox python project')
+class Handler(BaseHandler):
+    help = 'start bbox python project'
+    run_forever = True
+    
+    def add_arguments(self, parser):
+        parser.add_argument(
+            'module',
+            type=str,
+            nargs='+',
+            help='the box service module to load')
 
-parser.add_argument(
-    'module',
-    type=str,
-    nargs='+',
-    help='the box service module to load')
+        parser.add_argument(
+            '--boxid',
+            type=str,
+            default='',
+            help='box id')
 
-parser.add_argument(
-    '--boxid',
-    type=str,
-    default='',
-    help='box id')
+        parser.add_argument(
+            '--ssl',
+            type=str,
+            default='',
+            help='ssl prefix, the files certs/$prefix/$prefix.crt and certs/$prefix/$prefix.key must exist if specified')
 
-parser.add_argument(
-    '--ssl',
-    type=str,
-    default='',
-    help='ssl prefix, the files certs/$prefix/$prefix.crt and certs/$prefix/$prefix.key must exist if specified')
+    async def run(self, args):
+        cfg = get_ticket()
+        if cfg.language != 'python3':
+            print('language must be python3', file=sys.stderr)
+            sys.exit(1)
 
-async def main():
-    cfg = get_ticket()
-    if cfg.language != 'python3':
-        print('language must be python3', file=sys.stderr)
-        sys.exit(1)
+        if not args.boxid:
+            args.boxid = uuid.uuid4().hex
 
-    args, _ = parser.parse_known_args()
-    if not args.boxid:
-        args.boxid = uuid.uuid4().hex
+        mod_handlers = []
+        for modspec in args.module:
+            mod = import_module(modspec)
 
-    mod_handlers = []
-    for modspec in args.module:
-        mod = import_module(modspec)
+            if hasattr(mod, 'Handler'):
+                mod_handlers.append(mod.Handler())
+            else:
+                mod_handlers.append(BaseHandler())
 
-        if hasattr(mod, 'Handler'):
-            mod_handlers.append(mod.Handler())
-        else:
-            mod_handlers.append(BaseHandler())
+        # start cluster client
+        await get_cluster().start()
+        src, handler = await bbox_server.start_server(args)
 
-    # start cluster client
-    await get_cluster().start()
-    src, handler = await bbox_server.start_server(args)
-
-    for h in mod_handlers:
-        await h.start(args)
-    return handler, mod_handlers
-
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    handler, mod_handlers = loop.run_until_complete(main())
-    try:
-        loop.run_forever()
-    except KeyboardInterrupt:
         for h in mod_handlers:
+            await h.start(args)
+        self.handler = handler
+        self.mod_handlers = mod_handlers
+
+    def shutdown(self):
+        loop = asyncio.get_event_loop()
+        for h in self.mod_handlers:
             h.shutdown()
         loop.run_until_complete(get_box().deregister())
-        loop.run_until_complete(handler.finish_connections())
+        loop.run_until_complete(
+            self.handler.finish_connections())

@@ -7,7 +7,7 @@ setup(name='aiobbox',
       author='Zeng Ke',
       author_email='zk@bixin.com',
       packages=find_packages(),
-      scripts=['bin/bbox'],
+      scripts=['bin/bbox', 'bin/bbox.py', 'bin/bbox-gencert'],
       install_requires=[
           'aiohttp',
           'aiochannel',

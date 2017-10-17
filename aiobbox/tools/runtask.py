@@ -14,44 +14,43 @@ config_log()
 
 logger = logging.getLogger('bbox')
 
-parser = argparse.ArgumentParser(
-    prog='bbox run',
-    description='run bbox tasks')
+class Handler(BaseHandler):
+    help = 'run bbox tasks'
+    def add_arguments(self, parser):
+        parser.add_argument(
+            'module',
+            type=str,
+            help='the task module to load')
 
-parser.add_argument(
-    'module',
-    type=str,
-    help='the task module to load')
+        parser.add_argument(
+            'task_params',
+            type=str,
+            nargs='*',
+            help='task arguments')
 
-async def main():
-    cfg = get_ticket()
-    if cfg.language != 'python3':
-        print('language must be python3', file=sys.stderr)
-        sys.exit(1)
-    args, _ = parser.parse_known_args()
-    mod = import_module(args.module)
+    async def run(self, args):
+        cfg = get_ticket()
+        if cfg.language != 'python3':
+            print('language must be python3', file=sys.stderr)
+            sys.exit(1)
 
-    if hasattr(mod, 'Handler'):
-        handler = mod.Handler()
-    else:
-        handler = BaseHandler()
-    handler.add_arguments(parser)
-    args = parser.parse_args()
+        mod = import_module(args.module)
 
-    try:
-        await get_cluster().start()
-        r = await handler.run(args)
-        logger.info('task return %s', r)
-    finally:
-        c = get_cluster()
-        c.cont = False
-        await asyncio.sleep(0.1)
-        c.close()
-
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    try:
-        loop.run_until_complete(main())
-    except KeyboardInterrupt:
-        pass
+        if hasattr(mod, 'Handler'):
+            handler = mod.Handler()
+        else:
+            handler = BaseHandler()
+            
+        parser = argparse.ArgumentParser(prog='bbox.py run')
+        handler.add_arguments(parser)
+        sub_args = parser.parse_args(args.task_params)
+        try:
+            await get_cluster().start()
+            r = await handler.run(sub_args)
+            logger.info('task return %s', r)
+        finally:
+            c = get_cluster()
+            c.cont = False
+            await asyncio.sleep(0.1)
+            c.close()
 
