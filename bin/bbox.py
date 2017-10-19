@@ -13,7 +13,8 @@ sub_modules = [
     ('config', 'aiobbox.tools.clusterconfig'),
     ('cluster', 'aiobbox.tools.clusterop'),
     ('lock', 'aiobbox.tools.watchlock'),
-    ('printticket', 'aiobbox.tools.printticket')
+    ('printticket', 'aiobbox.tools.printticket'),
+    ('doc', 'aiobbox.tools.printdoc')
     ]
 
 def main():

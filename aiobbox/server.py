@@ -25,11 +25,16 @@ class MethodRef:
     def __init__(self, fn, **kw):
         self.fn = fn
 
+    def get_doc(self):
+        return self.fn.__doc__ or ''
+
 class Service(object):
     def __init__(self):
         self.methods = {}
+        self.srv_name = None
 
     def register(self, srv_name):
+        self.srv_name = srv_name
         if srv_name in srv_dict:
             logger.warn('srv {} already exist'.format(srv_name))
         srv_dict[srv_name] = self
@@ -47,6 +52,20 @@ class Service(object):
             return __w
         return decorator
 
+    def get_docs(self, srv_name):
+        arr = []
+        for name, mref in sorted(self.methods.items()):
+            doc = mref.get_doc()
+            arr.append({
+                'doc': doc,
+                'name': name
+                })
+        return {
+            'name': srv_name,
+            'doc': self.__doc__,
+            'methods': arr
+            }
+
 class Request:
     def __init__(self, body):
         self.body = body
@@ -57,7 +76,6 @@ class Request:
     async def handle(self):
         stats_name = None
         try:
-            start_time = time.time()
             self.req_id = self.body.get('id')
             if (not isinstance(self.req_id, str) or
                 self.req_id is None):
@@ -83,22 +101,23 @@ class Request:
                 raise ServiceError(
                     'service not found',
                     'server {} not found'.format(srv_name))
-            try:
-                method_ref = self.srv.methods[self.method]
-            except KeyError:
-                raise ServiceError(
-                    'method not found',
-                    'Method {} does not exist'.format(self.method))
-            stats_name = '/{}/{}'.format(srv_name, self.method)
-            stats.rpc_request_count.incr(stats_name)
-            res = await method_ref.fn(self, *self.params)
-            resp = {'result': res,
+
+            if self.method == '__doc__':
+                docs = self.srv.get_docs(srv_name)
+                resp = {
+                    'jsonrpc': '2.0',
                     'id': self.req_id,
-                    'error': None,
-                    'jsonrpc': '2.0'}
-            end_time = time.time()
-            if end_time - start_time > 1.0:
-                stats.slow_rpc_request_count.incr(stats_name)
+                    'result': docs
+                    }
+            else:
+                try:
+                    method_ref = self.srv.methods[self.method]
+                except KeyError:
+                    raise ServiceError(
+                        'method not found',
+                        'Method {} does not exist'.format(
+                            self.method))
+                resp = await self.call_method(method_ref, srv_name)
         except ServiceError as e:
             error_info = {
                 'message': getattr(e, 'message', str(e)),
@@ -115,6 +134,7 @@ class Request:
                 'result': None}
         except Exception as e:
             import traceback
+            traceback.print_exc()
             logger.error('error on JSON-RPC id %s',
                           self.req_id,
                           exc_info=True)
@@ -138,6 +158,21 @@ class Request:
                     'jsonrpc': '2.0',
                     'result': None}
         return resp
+
+    async def call_method(self, method_ref, srv_name):
+            start_time = time.time()
+            stats_name = '/{}/{}'.format(
+                srv_name, self.method)
+            stats.rpc_request_count.incr(stats_name)
+            res = await method_ref.fn(self, *self.params)
+            resp = {'result': res,
+                    'id': self.req_id,
+                    'error': None,
+                    'jsonrpc': '2.0'}
+            end_time = time.time()
+            if end_time - start_time > 1.0:
+                stats.slow_rpc_request_count.incr(stats_name)
+            return resp
 
     async def handle_ws(self, ws):
         resp = await self.handle()

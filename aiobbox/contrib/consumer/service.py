@@ -11,26 +11,15 @@ from aiobbox.cluster import get_sharedconfig
 from aiobbox.utils import parse_int
 
 srv = Service()
-
+srv.__doc__ = '''
+Consumer service provides consumer token generation and verification.
+It is composed since many other services need similiar funcs.
+'''
 @srv.method('createConsumer')
 async def create_consumer(request, consumer, reuse):
     '''
-    Create a consumer for test
-    -----
-    parameters:
-      - name: consumer
-        description: consumer name
-        type: string
-        require: true
-
-    return:
-      - name: consumer
-        description: the same name with the parameter
-        type: string
-
-      - name: secret
-        description: consumer secret used to get consumer token
-        type: string
+    createConsumer(consumer, reuse)
+    create a consumer for test, note that this methods is *ONLY* used for testing. Production consumer can be created using `bbox.py run aiobbox.contrib.consumer.create_consumer <name>`
     '''
     if not testing.test_mode:
         raise ServiceError('access denied')
@@ -66,27 +55,8 @@ async def create_consumer(request, consumer, reuse):
 @srv.method('createToken')
 async def create_consumer_token(request, consumer, secret, options=None):
     '''
-    Create a consume token by secret
-    -----
-    parameters:
-      - name: consumer
-        description: the consumer name
-        type: string
-        require: true
-      - name: secret
-        description: consumer secret
-        type: string
-        require: true
-      - name options
-        descriptions: consumer token options
-        type: string
-        require: true
-        elements:
-          - name: expire_in
-            description: the consumer token expiration in seconds
-            type: int
-            require: false
-            default: 3 * 86400
+    createToken(consumer, secret, options=None)
+    Create a consume token by preallocated consumer and secret
     '''
 
     if not isinstance(consumer, str):
@@ -126,6 +96,10 @@ async def create_consumer_token(request, consumer, secret, options=None):
 
 @srv.method('verifyToken')
 async def verify_consumer_token(request, token):
+    '''
+    verifyToken(token)
+    verify a token, it may be invalid or expired
+    '''
     arr = token.split(':')
     if len(arr) != 4 or re.search(r'\s', token):
         raise ServiceError('invalid token',

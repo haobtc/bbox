@@ -44,13 +44,19 @@ class Handler(BaseHandler):
             help='time interval between times')
 
         parser.add_argument(
+            '--pp',
+            type=bool,
+            default=False,
+            help='pretty print')
+
+        parser.add_argument(
             '--dispatch_policy',
             type=str,
             default='first',
             help='dispatch request to clients')
 
         parser.add_argument(
-            '--print_stack',
+            '--stack',
             type=bool,
             default=False,
             help='print error stack')
@@ -72,15 +78,18 @@ class Handler(BaseHandler):
                     method,
                     *ps,
                     retry=args.retry)
-                print(json_to_str(r))
-                if (args.print_stack
+                if args.pp:
+                    print(json_pp(r))
+                else:
+                    print(json_to_str(r))
+                if (args.stack
                     and r.get('error')
                     and isinstance(r['error'], dict)
                     and r['error'].get('stack')):
-                    
+
                     print('\nerror stack:')
                     print(r['error']['stack'])
-            
+
                 if i >= args.ntimes - 1:
                     break
                 await asyncio.sleep(args.interval)

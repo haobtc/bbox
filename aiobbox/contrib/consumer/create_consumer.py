@@ -9,7 +9,7 @@ from aiobbox.cluster import get_sharedconfig, get_cluster
 class Handler(BaseHandler):
     def add_arguments(self, parser):
         parser.add_argument(
-            '--consumer',
+            'consumer',
             type=str,
             help='consumer name')
 
