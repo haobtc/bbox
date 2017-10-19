@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 import argparse
 import asyncio
+from aiobbox.log import config_log
 from aiobbox.handler import BaseHandler
 from aiobbox.utils import import_module
+
+config_log()
 
 sub_modules = [
     ('init', 'aiobbox.tools.initprj'),
@@ -29,7 +32,7 @@ def main():
         mod = import_module(mod_name)
 
         assert issubclass(mod.Handler, BaseHandler)
-        
+
         handler = mod.Handler()
         help_msg = getattr(handler, 'help', '')
         parser = sub_parsers.add_parser(sub_cmd, help=help_msg)

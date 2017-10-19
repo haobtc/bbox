@@ -1,14 +1,11 @@
 import os, sys
 import json
-from aiobbox.log import config_log
 import asyncio
 import argparse
 import aiobbox.client as bbox_client
 from aiobbox.utils import guess_json, json_pp
 from aiobbox.cluster import get_cluster, get_ticket
 from aiobbox.handler import BaseHandler
-
-config_log()
 
 parser = argparse.ArgumentParser(
     prog='bbox cluster')

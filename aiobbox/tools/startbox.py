@@ -3,19 +3,16 @@ import uuid
 import json
 import asyncio
 import argparse
-from aiobbox.log import config_log
 import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.cluster import get_ticket
 from aiobbox.utils import import_module
 from aiobbox.handler import BaseHandler
 
-config_log()
-
 class Handler(BaseHandler):
     help = 'start bbox python project'
     run_forever = True
-    
+
     def add_arguments(self, parser):
         parser.add_argument(
             'module',

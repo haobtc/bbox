@@ -4,13 +4,11 @@ import uuid
 import json
 import asyncio
 import argparse
-from aiobbox.log import config_log
+
 import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster, get_ticket
 from aiobbox.utils import import_module
 from aiobbox.handler import BaseHandler
-
-config_log()
 
 logger = logging.getLogger('bbox')
 
@@ -40,7 +38,7 @@ class Handler(BaseHandler):
             handler = mod.Handler()
         else:
             handler = BaseHandler()
-            
+
         parser = argparse.ArgumentParser(prog='bbox.py run')
         handler.add_arguments(parser)
         sub_args = parser.parse_args(args.task_params)

@@ -4,14 +4,11 @@ import shlex
 import json
 import asyncio
 import argparse
-from aiobbox.log import config_log
 import aiobbox.client as bbox_client
 from aiobbox.cluster import get_cluster, get_sharedconfig, SimpleLock
 from aiobbox.exceptions import ETCDError
 from aiobbox.utils import guess_json, json_pp
 from aiobbox.handler import BaseHandler
-
-config_log(mute_console=False)
 
 parser = argparse.ArgumentParser(
     prog='bbox lock',
@@ -25,7 +22,7 @@ class Handler(BaseHandler):
             'entry',
             type=str,
             help='lock entry')
-        
+
         parser.add_argument(
             'commands',
             type=str,
@@ -49,7 +46,7 @@ class Handler(BaseHandler):
                 await asyncio.sleep(0.1)
 
     def shutdown(self):
-        loop = asyncio.get_event_loop()        
+        loop = asyncio.get_event_loop()
         c = get_cluster()
         loop.run_until_complete(SimpleLock.close_all_keys(c))
         c.cont = False

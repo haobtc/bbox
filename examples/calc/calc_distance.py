@@ -10,7 +10,7 @@ class Handler(BaseHandler):
 
         parser.add_argument('--b',
                            type=float)
-        
+
     async def run(self, args):
         #for _ in range(2):
             #r = await pool.calc.echostr('888', retry=100)
@@ -18,4 +18,4 @@ class Handler(BaseHandler):
          #   await asyncio.sleep(3)
         r = await pool.calc.add2num(args.a, args.b)
         print(r)
-        
+

@@ -3,6 +3,11 @@ import os
 import logging
 import logging.config
 
+'''
+config logging from envs, the logging output to syslog instead by default
+once the env BBOX_LOG_CONSOLE is set, the console is output
+'''
+
 LOGGING = {
     'version': 1,
     'handlers': {
@@ -29,23 +34,22 @@ LOGGING = {
     'loggers': {
     },
     'root': {
-        'handlers': ['console', 'syslog'],
+        'handlers': ['syslog'],
         'level': 'DEBUG'
     },
 }
 
-def config_log(mute_console=None):
+def config_log():
     from aiobbox import testing
     logging_config = LOGGING.copy()
 
     handlers = ['syslog']
 
-    if mute_console is None:
-        mute_console = (
-            os.getenv('BBOX_LOG_MUTE', '').lower()
-            in ('1', 'true', 'yes'))
+    log_to_console = (
+        os.getenv('BBOX_LOG_CONSOLE', '').lower()
+        in ('1', 'true', 'yes'))
 
-    if not mute_console:
+    if log_to_console:
         handlers.append('console')
 
     log_level = os.getenv('BBOX_LOG_LEVEL')

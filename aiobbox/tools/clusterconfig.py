@@ -1,4 +1,3 @@
-from aiobbox.log import config_log
 import os, sys
 import re
 import json
@@ -8,8 +7,6 @@ import aiobbox.client as bbox_client
 from aiobbox.cluster import get_cluster, get_sharedconfig
 from aiobbox.utils import guess_json, json_pp
 from aiobbox.handler import BaseHandler
-
-config_log(mute_console=True)
 
 async def get_config(args):
     sec_key = args.sec_key

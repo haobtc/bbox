@@ -3,13 +3,10 @@ import re
 import json
 import asyncio
 import argparse
-from aiobbox.log import config_log
 import aiobbox.client as bbox_client
 from aiobbox.cluster import get_cluster
 from aiobbox.utils import guess_json, json_pp, json_to_str
 from aiobbox.handler import BaseHandler
-
-config_log()
 
 class Handler(BaseHandler):
     help = 'test an rpc interface'

@@ -3,13 +3,11 @@ import re
 import json
 import asyncio
 import argparse
-from aiobbox.log import config_log
 import aiobbox.client as bbox_client
 from aiobbox.cluster import get_cluster
 from aiobbox.utils import guess_json, json_pp, json_to_str
 from aiobbox.handler import BaseHandler
 
-config_log()
 
 def handle_text(text, indent=0, prompt=''):
     text = text or ''
@@ -50,7 +48,7 @@ def print_markdown(r):
         if doc:
             print(doc)
         print()
-            
+
 class Handler(BaseHandler):
     help = 'print human readable documents'
     def add_arguments(self, parser):
@@ -58,7 +56,7 @@ class Handler(BaseHandler):
             'srv_name',
             type=str,
             help='service name')
-        
+
         parser.add_argument(
             '--format',
             type=str,
