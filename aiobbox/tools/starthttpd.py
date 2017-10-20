@@ -1,4 +1,5 @@
 import os, sys
+import argparse
 import logging
 import uuid
 import json
@@ -38,6 +39,13 @@ class Handler(BaseHandler):
             default='',
             help='box id')
 
+        parser.add_argument(
+            'mod_args',
+            type=str,
+            nargs='*',
+            default='',
+            help='custom args')
+
     async def run(self, args):
         # start cluster client and box
         httpd_mod = import_module(args.module)
@@ -46,7 +54,9 @@ class Handler(BaseHandler):
             mod_handler = httpd_mod.Handler()
         else:
             mod_handler = BaseHandler()
+        parser = argparse.ArgumentParser(prog='bbox.py httpd')
         mod_handler.add_arguments(parser)
+        sub_args = parser.parse_args(args.mod_args)
 
         if not args.boxid:
             args.boxid = uuid.uuid4().hex
@@ -54,7 +64,7 @@ class Handler(BaseHandler):
         ssl_context = get_ssl_context(args.ssl)
         await get_cluster().start()
 
-        http_app = await mod_handler.get_app(args)
+        http_app = await mod_handler.get_app(sub_args)
         _, handler = await bbox_server.start_server(args)
 
         http_handler = http_app.make_handler()
@@ -65,7 +75,7 @@ class Handler(BaseHandler):
         await loop.create_server(http_handler,
                                  host, port,
                                  ssl=ssl_context)
-        await mod_handler.start(args)
+        await mod_handler.start(sub_args)
         self.handler = handler
         self.mod_handler = mod_handler
         self.http_handler = http_handler

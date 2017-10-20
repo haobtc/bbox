@@ -5,7 +5,7 @@ import logging.config
 
 '''
 config logging from envs, the logging output to syslog instead by default
-once the env BBOX_LOG_CONSOLE is set, the console is output
+once the env BBOX_LOG_CONSOLE is set, logs can also be put to console
 '''
 
 LOGGING = {
