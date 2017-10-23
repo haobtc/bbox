@@ -73,7 +73,7 @@ class Handler(BaseHandler):
         parser.add_argument(
             '--backend',
             type=str,
-            default=''
+            default='',
             help='srv::method as the backend')
 
     async def start(self, args):

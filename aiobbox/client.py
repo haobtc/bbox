@@ -98,9 +98,6 @@ class WebSocketClient:
         if not self.connected:
             raise ConnectionError('websocket closed')
 
-        url = urljoin(self.url_prefix,
-                      '/jsonrpc/2.0/api')
-
         method = srv + '::' + method
         if not req_id:
             req_id = uuid.uuid4().hex
