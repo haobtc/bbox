@@ -130,8 +130,7 @@ class Request:
             resp = {
                 'jsonrpc': '2.0',
                 'error': error_info,
-                'id': self.req_id,
-                'result': None}
+                'id': self.req_id}
         except Exception as e:
             import traceback
             traceback.print_exc()
@@ -155,8 +154,7 @@ class Request:
                 error_info['stack'] = traceback.format_exc()
             resp = {'error': error_info,
                     'id': self.req_id,
-                    'jsonrpc': '2.0',
-                    'result': None}
+                    'jsonrpc': '2.0'}
         return resp
 
     async def call_method(self, method_ref, srv_name):
@@ -167,7 +165,6 @@ class Request:
             res = await method_ref.fn(self, *self.params)
             resp = {'result': res,
                     'id': self.req_id,
-                    'error': None,
                     'jsonrpc': '2.0'}
             end_time = time.time()
             if end_time - start_time > 1.0:

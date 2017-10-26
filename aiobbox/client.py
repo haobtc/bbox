@@ -292,7 +292,8 @@ class FullConnectPool:
         if not req_id:
             req_id = uuid.uuid4().hex
         try:
-            return await client.request(srv, method, *params, req_id=req_id)
+            return await client.request(srv, method,
+                                        *params, req_id=req_id)
         except ConnectionError:
             assert not client.connected
             raise Retry()
