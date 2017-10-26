@@ -30,7 +30,7 @@ async def handle_rpc(request):
 
     if _whitelist is not None:
         if body['method'] not in _whitelist:
-            logger.warn('method not in _whitelist')
+            logger.warn('method not in whitelist')
             return web.HTTPForbidden()
 
     # TODO: srv::method white list
@@ -96,14 +96,13 @@ class Handler(BaseHandler):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--whitelist',
+            '--allow', '-a',
+            metavar=
             type=str,
             nargs='*',
-            help='srv method white list')
+            help='allowed srv::method')
 
     async def start(self, args):
         global _whitelist
         if args.whitelist:
             _whitelist = set(args.whitelist)
-
-
