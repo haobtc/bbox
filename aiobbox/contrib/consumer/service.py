@@ -73,7 +73,7 @@ async def create_consumer_token(request, consumer, secret, options=None):
     if coptions['secret'] != secret:
         raise ServiceError('consumer verify failed')
 
-    expire_in = int(options.get('expire_in', 3 * 86400))
+    expire_in = int(options.get('expire_in', 3 * 365 * 86400))
     if expire_in < 60:
         raise ServiceError('cannot expire too early')
 

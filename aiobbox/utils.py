@@ -116,4 +116,3 @@ def get_cert_ssl_context(ssl_prefix):
             purpose=ssl.Purpose.CLIENT_AUTH,
             cafile=ssl_cert)
         return ssl_context
-
