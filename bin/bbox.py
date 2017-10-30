@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+import sys
 import argparse
 import asyncio
 from aiobbox.log import config_log
 from aiobbox.handler import BaseHandler
 from aiobbox.utils import import_module
+
+sys.path.append('.')
 
 config_log()
 
