@@ -97,12 +97,11 @@ class Handler(BaseHandler):
     def add_arguments(self, parser):
         parser.add_argument(
             '--allow', '-a',
-            metavar=
             type=str,
             nargs='*',
             help='allowed srv::method')
 
     async def start(self, args):
         global _whitelist
-        if args.whitelist:
-            _whitelist = set(args.whitelist)
+        if args.allow:
+            _whitelist = set(args.allow)
