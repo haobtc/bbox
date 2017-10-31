@@ -82,7 +82,7 @@ class Handler(BaseHandler):
 
     def shutdown(self):
         loop = asyncio.get_event_loop()
-        for h in self.mod_handlers:
+        for h in self.mod_handler:
             h.shutdown()
         loop.run_until_complete(get_box().deregister())
         loop.run_until_complete(
