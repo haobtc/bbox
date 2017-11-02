@@ -64,5 +64,5 @@ class Handler(BaseHandler):
         for h in self.mod_handlers:
             h.shutdown()
         loop.run_until_complete(get_box().deregister())
-        loop.run_until_complete(
-            self.handler.finish_connections())
+        #loop.run_until_complete(
+        #    self.handler.finish_connections())
