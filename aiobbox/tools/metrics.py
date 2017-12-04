@@ -5,7 +5,11 @@ import uuid
 import json
 import asyncio
 from urllib.parse import urljoin
-from aiohttp import web, ClientSession, ClientConnectionError
+from aiohttp import (
+    web,
+    ClientSession,
+    ClientConnectionError)
+
 import argparse
 import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster
@@ -13,12 +17,15 @@ from aiobbox.cluster import get_ticket
 from aiobbox.utils import import_module, abs_path
 from aiobbox.client import HttpClient
 from aiobbox.metrics import collect_cluster_metrics, report_box_failure
-from aiobbox.handler import BaseHandler
+
+from .httpbase import Handler as HttpdHandler
 
 logger = logging.getLogger('bbox')
 
 export_cluster = False
 collect_localbox = False
+
+bearer_token = None
 
 _http_clients = {}
 
@@ -32,13 +39,18 @@ async def get_box_metrics(connect):
         url = urljoin(client.url_prefix, '/metrics.json')
         resp = await client.session.get(url)
     except ClientConnectionError:
-        logger.error('client connection error to %s', bind)
-        return report_box_failure(bind)
+        logger.error('client connection error to %s', connect, exc_info=True)
+        return report_box_failure(connect)
     return await resp.json()
 
 async def handle_metrics(request):
-    c = get_cluster()
+    # check bearer token
+    if bearer_token:
+        if (request.headers.get('Authorization')
+            != 'Bearer {}'.format(bearer_token)):
+            raise web.HTTPUnauthorized()
 
+    c = get_cluster()
     with ClientSession() as session:
         if collect_localbox:
             fns = [get_box_metrics(bind)
@@ -77,8 +89,10 @@ async def handle_metrics(request):
     return web.Response(text='\n'.join(meta_lines + lines + ['']),
                         headers=headers)
 
-class Handler(BaseHandler):
+class Handler(HttpdHandler):
     def add_arguments(self, parser):
+        super(Handler, self).add_arguments(parser)
+
         parser.add_argument(
             '--export_cluster',
             type=bool,
@@ -89,6 +103,10 @@ class Handler(BaseHandler):
             type=bool,
             default=collect_localbox,
             help='coll')
+        parser.add_argument(
+            '--bearer_token',
+            type=str,
+            help='bearer token')
 
     async def get_app(self, args):
         app = web.Application()
@@ -97,6 +115,7 @@ class Handler(BaseHandler):
         return app
 
     async def start(self, args):
-        global export_cluster, collect_localbox
+        global export_cluster, collect_localbox, bearer_token
         export_cluster = args.export_cluster
         collect_localbox = args.collect_localbox
+        bearer_token = args.bearer_token

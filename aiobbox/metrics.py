@@ -66,3 +66,37 @@ def report_box_failure(bind):
         'meta': meta,
         'lines': lines
         }
+
+class MetricsCount:
+    name = None
+    help = None
+    field_name = None
+    type = 'gauge'
+
+    values = defaultdict(int)
+    def incr(self, coin):
+        self.values[coin] += 1
+
+    async def collect(self):
+        metr = []
+        for coin, cnt in self.values.items():
+            metr.append(({self.field_name: coin}, cnt))
+        self.values.clear()
+        return metr
+
+class MetricsAmount:
+    name = None
+    help = None
+    field_name = None
+    type = 'gauge'
+
+    values = defaultdict(float)
+    def add(self, key, amount):
+        self.values[key] += amount
+
+    async def collect(self):
+        metr = []
+        for key, cnt in self.values.items():
+            metr.append(({self.field_name: key}, cnt))
+        self.values.clear()
+        return metr

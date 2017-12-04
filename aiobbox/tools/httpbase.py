@@ -18,15 +18,10 @@ class Handler(BaseHandler):
     mod_handle = None
     def add_arguments(self, parser):
         parser.add_argument(
-            'module',
-            type=str,
-            help='python module to custom apps')
-
-        parser.add_argument(
             '--bind',
             type=str,
             default='127.0.0.1:28080',
-            help='the box service module to load')
+            help='the box server bind')
 
         parser.add_argument(
             '--ssl',
@@ -40,31 +35,15 @@ class Handler(BaseHandler):
             default='',
             help='box id')
 
-        parser.add_argument(
-            'mod_args',
-            type=str,
-            nargs='*',
-            help='custom args')
-
     async def run(self, args):
         # start cluster client and box
-        httpd_mod = import_module(args.module)
-        if hasattr(httpd_mod, 'Handler'):
-            assert issubclass(httpd_mod.Handler, BaseHandler)
-            mod_handler = httpd_mod.Handler()
-        else:
-            mod_handler = BaseHandler()
-        parser = argparse.ArgumentParser(prog='bbox.py httpd')
-        mod_handler.add_arguments(parser)
-        sub_args = parser.parse_args(args.mod_args)
-
         if not args.boxid:
             args.boxid = uuid.uuid4().hex
 
         ssl_context = get_ssl_context(args.ssl)
         await get_cluster().start()
 
-        http_app = await mod_handler.get_app(sub_args)
+        http_app = await self.get_app(args)
         _, handler = await bbox_server.start_server(args)
 
         http_handler = http_app.make_handler()
@@ -75,17 +54,13 @@ class Handler(BaseHandler):
         await loop.create_server(http_handler,
                                  host, port,
                                  ssl=ssl_context)
-        await mod_handler.start(sub_args)
+        await self.start(args)
         self.handler = handler
-        self.mod_handler = mod_handler
         self.http_handler = http_handler
+
+    async def get_app(self, args):
+        raise NotImplemented
 
     def shutdown(self):
         loop = asyncio.get_event_loop()
-        if self.mod_handler:
-            self.mod_handler.shutdown()
         loop.run_until_complete(get_box().deregister())
-        loop.run_until_complete(
-            self.handler.finish_connections())
-        loop.run_until_complete(
-            self.http_handler.finish_connections())
