@@ -5,6 +5,7 @@ import uuid
 import json
 import asyncio
 import aiobbox.server as bbox_server
+from aiobbox.exceptions import Stop
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.cluster import get_ticket
 from aiobbox.utils import import_module, get_ssl_context
@@ -33,6 +34,12 @@ class Handler(BaseHandler):
             type=str,
             default='',
             help='ssl prefix, the files certs/$prefix/$prefix.crt and certs/$prefix/$prefix.key must exist if specified')
+
+        parser.add_argument(
+            '--ttl',
+            type=float,
+            default=3600 * 24,  # one day
+            help='time to live')
 
         parser.add_argument(
             '--boxid',
@@ -75,17 +82,24 @@ class Handler(BaseHandler):
         await loop.create_server(http_handler,
                                  host, port,
                                  ssl=ssl_context)
+        asyncio.ensure_future(self.wait_ttl(args.ttl))
         await mod_handler.start(sub_args)
+
         self.handler = handler
         self.mod_handler = mod_handler
         self.http_handler = http_handler
+
+    async def wait_ttl(self, ttl):
+        await asyncio.sleep(ttl)
+        logger.warn('ttl expired, stop')
+        sys.exit(0)
 
     def shutdown(self):
         loop = asyncio.get_event_loop()
         if self.mod_handler:
             self.mod_handler.shutdown()
         loop.run_until_complete(get_box().deregister())
-        loop.run_until_complete(
-            self.handler.finish_connections())
-        loop.run_until_complete(
-            self.http_handler.finish_connections())
+        #loop.run_until_complete(
+        #    self.handler.finish_connections())
+        #loop.run_until_complete(
+        #    self.http_handler.finish_connections())

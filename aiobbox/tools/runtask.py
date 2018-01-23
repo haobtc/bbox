@@ -5,6 +5,7 @@ import json
 import asyncio
 import argparse
 
+from aiobbox.exceptions import Stop
 import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster, get_ticket
 from aiobbox.utils import import_module

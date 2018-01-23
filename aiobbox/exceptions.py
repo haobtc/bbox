@@ -13,6 +13,9 @@ class ETCDError(BaseError):
 class Retry(Exception):
     pass
 
+class Stop(Exception):
+    pass
+
 class ServiceError(Exception):
     def __init__(self, code, msg=None):
         self.code = code
