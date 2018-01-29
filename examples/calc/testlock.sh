@@ -2,6 +2,7 @@
 
 timeout=$1
 
-echo acquired lock
+echo `date +'%H:%M:%S'` acquired lock
 sleep $timeout
-echo slept $timeout seconds
+echo `date +'%H:%M:%S'` slept $timeout seconds
+
