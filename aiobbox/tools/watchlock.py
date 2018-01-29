@@ -37,7 +37,7 @@ class Handler(BaseHandler):
 
         c = get_cluster()
         async with c.acquire_lock(args.entry) as lock:
-            if lock.is_acquired and rest_args:
+            if lock.is_acquired and args.commands:
                 proc = await asyncio.create_subprocess_shell(
                     ' '.join(shlex.quote(a)
                              for a in args.commands))
