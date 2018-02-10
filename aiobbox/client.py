@@ -14,6 +14,8 @@ from aiobbox.server import has_service, Request
 
 logger = logging.getLogger('bbox')
 
+DEFAULT_TIMEOUT_SECS = 5
+
 try:
     import selectors
 except ImportError:
@@ -32,7 +34,8 @@ class HttpClient:
         conn = aiohttp.TCPConnector(ssl_context=ssl_context)
         self.session = aiohttp.ClientSession(connector=conn)
 
-    async def request(self, srv, method, *params):
+    async def request(self, srv, method, *params, timeout=DEFAULT_TIMEOUT_SECS):
+        print('timeout secs', timeout)
         url = urljoin(self.url_prefix,
                       '/jsonrpc/2.0/api')
 
@@ -44,7 +47,7 @@ class HttpClient:
             'params': params
             }
         async with self.session.post(
-                url, json=payload, timeout=10) as resp:
+                url, json=payload, timeout=DEFAULT_TIMEOUT_SECS) as resp:
             ret = await resp.text()
             return ret
 
@@ -92,9 +95,10 @@ class WebSocketClient:
             ws = await self.session.ws_connect(url, autoclose=False, autoping=False, heartbeat=1.0)
             self.ws = ws
         except OSError:
-            logger.warn('connect to %s failed', url)
+            logger.warn('OSError, connect to %s failed', url)
 
-    async def request(self, srv, method, *params, req_id=None):
+    async def request(self, srv, method, *params, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
+        print('timeout secs', timeout)        
         if not self.connected:
             raise ConnectionError('websocket closed')
 
@@ -112,8 +116,9 @@ class WebSocketClient:
         self.waiters[req_id] = channel
         try:
             await self.ws.send_json(payload)
-            r = await channel.get()
-            #del self.waiters[req_id]
+            r = await asyncio.wait_for(
+                channel.get(),
+                timeout=timeout)
             return r
         except ChannelClosed:
             raise ConnectionError(
@@ -256,7 +261,7 @@ class FullConnectPool:
     def __getitem__(self, name):
         return ServiceRef(name, self)
 
-    async def request(self, srv, method, *params, boxid=None, retry=0, req_id=None):
+    async def request(self, srv, method, *params, boxid=None, retry=0, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
         if not req_id:
             req_id = uuid.uuid4().hex
         if has_service(srv):
@@ -271,15 +276,18 @@ class FullConnectPool:
 
         for rty in range(retry + 1):
             try:
-                return await self._request(srv, method,
-                                           *params, boxid=None,
-                                           req_id=req_id)
+                return await self._request(
+                    srv, method,
+                    *params, boxid=None,
+                    req_id=req_id,
+                    timeout=timeout
+                )
             except Retry:
                 continue
         raise ConnectionError(
             'cannot retry connections')
 
-    async def _request(self, srv, method, *params, boxid=None, req_id=None):
+    async def _request(self, srv, method, *params, boxid=None, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
         await self.ensure_clients(srv)
         client = self.get_client(srv, boxid=boxid)
         if not client:
@@ -289,8 +297,11 @@ class FullConnectPool:
         if not req_id:
             req_id = uuid.uuid4().hex
         try:
-            return await client.request(srv, method,
-                                        *params, req_id=req_id)
+            return await client.request(
+                srv, method,
+                *params,
+                req_id=req_id,
+                timeout=timeout)
         except ConnectionError:
             assert not client.connected
             raise Retry()
