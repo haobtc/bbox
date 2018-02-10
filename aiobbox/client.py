@@ -35,7 +35,6 @@ class HttpClient:
         self.session = aiohttp.ClientSession(connector=conn)
 
     async def request(self, srv, method, *params, timeout=DEFAULT_TIMEOUT_SECS):
-        print('timeout secs', timeout)
         url = urljoin(self.url_prefix,
                       '/jsonrpc/2.0/api')
 
@@ -98,7 +97,6 @@ class WebSocketClient:
             logger.warn('OSError, connect to %s failed', url)
 
     async def request(self, srv, method, *params, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
-        print('timeout secs', timeout)        
         if not self.connected:
             raise ConnectionError('websocket closed')
 
