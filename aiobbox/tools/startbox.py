@@ -1,4 +1,5 @@
 import os, sys
+import logging
 import uuid
 import json
 import asyncio
@@ -32,6 +33,12 @@ class Handler(BaseHandler):
             default='',
             help='ssl prefix, the files certs/$prefix/$prefix.crt and certs/$prefix/$prefix.key must exist if specified')
 
+        parser.add_argument(
+            '--ttl',
+            type=float,
+            default=3600 * 24,  # one day
+            help='time to live')
+
     async def run(self, args):
         cfg = get_ticket()
         if cfg.language != 'python3':
@@ -58,6 +65,13 @@ class Handler(BaseHandler):
             await h.start(args)
         self.handler = handler
         self.mod_handlers = mod_handlers
+
+        asyncio.ensure_future(self.wait_ttl(args.ttl))
+
+    async def wait_ttl(self, ttl):
+        await asyncio.sleep(ttl)
+        logging.warn('box ttl expired, stop')
+        sys.exit(0)
 
     def shutdown(self):
         loop = asyncio.get_event_loop()

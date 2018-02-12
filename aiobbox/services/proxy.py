@@ -39,11 +39,17 @@ async def handle_rpc(request):
 
     params = body['params']
     try:
+        timeout = float(
+            request.headers.get('X-Bbox-Proxy-Timeout', '8'))
+    except ValueError:
+        timeout = 8
+
+    try:
         r = await pool.request(
             srv, method,
             *params,
             req_id=body.get('id'),
-            timeout=8)
+            timeout=timeout)
     except asyncio.TimeoutError:
         logging.warn('timeout error on request srv %s, method %s', srv, method, exc_info=True)
         return web.HTTPBadGateway()
