@@ -46,7 +46,8 @@ class Handler(BaseHandler):
         try:
             await get_cluster().start()
             r = await handler.run(sub_args)
-            logger.info('task return %s', r)
+            if r:
+                logger.debug('task return %s', r)
         finally:
             c = get_cluster()
             c.cont = False
