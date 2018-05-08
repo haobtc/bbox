@@ -174,7 +174,7 @@ class Request:
     async def handle_ws(self, ws):
         resp = await self.handle()
         if resp:
-            ws.send_json(resp)
+            await ws.send_json(resp)
         return resp
 
 async def handle(request):
