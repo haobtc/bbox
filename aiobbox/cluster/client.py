@@ -59,6 +59,7 @@ class ClientAgent(EtcdClient):
                     new_route[srv].append(bind)
         except etcd.EtcdKeyNotFound:
             pass
+
         self.route = new_route
         self.boxes = boxes
 

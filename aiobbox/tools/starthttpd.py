@@ -91,7 +91,9 @@ class Handler(BaseHandler):
 
     async def wait_ttl(self, ttl):
         await asyncio.sleep(ttl)
-        logger.warn('ttl expired, stop')
+        logger.info('ttl expired, stoping')
+        await get_box().deregister()
+        logger.info('ttl expired, stopped')
         sys.exit(0)
 
     def shutdown(self):
