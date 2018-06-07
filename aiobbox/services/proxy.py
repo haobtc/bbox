@@ -40,9 +40,9 @@ async def handle_rpc(request):
     params = body['params']
     try:
         timeout = float(
-            request.headers.get('X-Bbox-Proxy-Timeout', '8'))
+            request.headers.get('X-Bbox-Proxy-Timeout', '20'))
     except ValueError:
-        timeout = 8
+        timeout = 20
 
     try:
         r = await pool.request(
