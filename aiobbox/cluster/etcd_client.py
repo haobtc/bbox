@@ -29,12 +29,18 @@ class EtcdClient:
         self.client_failed = False
         self.cont = True
 
+        protocol = 'http'
         etcd_list = get_ticket().etcd
+        if isinstance(etcd_list, dict):
+            protocol = etcd_list['protocol']
+            etcd_list = etcd_list['host']
+
         if len(etcd_list) == 1:
             host, port = etcd_list[0].split(':')
             self.client = etcd.Client(
                 host=host,
                 port=int(port),
+                protocol=protocol,
                 allow_reconnect=True,
                 allow_redirect=True)
         else:
@@ -46,6 +52,7 @@ class EtcdClient:
                          for e in etcd_list)
             self.client = etcd.Client(
                 host=host,
+                protocol=protocol,
                 allow_reconnect=True,
                 allow_redirect=True)
 
