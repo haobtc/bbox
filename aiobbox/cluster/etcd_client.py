@@ -115,7 +115,8 @@ class EtcdClient:
                               waitIndex=last_index,
                               wait=True),
                     timeout=60)
-                last_index = chg.modifiedIndex
+                logging.debug('watched change %s', chg)
+                last_index = chg.modifiedIndex + 1
                 await changed(chg)
             except asyncio.TimeoutError:
                 logger.debug(
@@ -125,6 +126,7 @@ class EtcdClient:
                 logger.warn('etcd error, sleep for a while')
                 await asyncio.sleep(1)
             await changed(None)
+
 
     def acquire_lock(self, name):
         #cfg = get_ticket()
