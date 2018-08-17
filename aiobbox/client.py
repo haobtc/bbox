@@ -14,7 +14,7 @@ from aiobbox.server import has_service, Request
 
 logger = logging.getLogger('bbox')
 
-DEFAULT_TIMEOUT_SECS = 5
+DEFAULT_TIMEOUT_SECS = 10
 
 try:
     import selectors
@@ -159,7 +159,7 @@ class WebSocketClient:
                 return
 
             req_id = data.get('id')
-            if req_id:
+            if req_id is not None:
                 channel = self.waiters.get(req_id)
                 if channel:
                     del self.waiters[req_id]
