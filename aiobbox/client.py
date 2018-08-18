@@ -1,4 +1,5 @@
 import logging
+import sys, os
 import asyncio
 import random
 import aiohttp
@@ -22,7 +23,8 @@ except ImportError:
     from asyncio import selectors
 
 class HttpClient:
-    def __init__(self, connect):
+    def __init__(self, connect, expect='text'):
+        self.expect = expect
         c = get_cluster()
         box = c.boxes[connect]
         self.ssl_prefix = box['ssl']
@@ -34,21 +36,25 @@ class HttpClient:
         conn = aiohttp.TCPConnector(ssl_context=ssl_context)
         self.session = aiohttp.ClientSession(connector=conn)
 
-    async def request(self, srv, method, *params, timeout=DEFAULT_TIMEOUT_SECS):
+    async def request(self, srv, method, *params, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
         url = urljoin(self.url_prefix,
                       '/jsonrpc/2.0/api')
 
         method = srv + '::' + method
+        if req_id is None:
+            req_id = uuid.uuid4().hex
         payload = {
             'jsonrpc': '2.0',
-            'id': uuid.uuid4().hex,
+            'id': req_id,
             'method': method,
             'params': params
             }
         async with self.session.post(
                 url, json=payload, timeout=DEFAULT_TIMEOUT_SECS) as resp:
-            ret = await resp.text()
-            return ret
+            if self.expect == 'text':
+                return await resp.text()
+            else:
+                return await resp.json()
 
     def __del__(self):
         self.session = None
@@ -189,7 +195,7 @@ class ServiceRef:
     def __getattr__(self, name):
         return MethodRef(name, self)
 
-class FullConnectPool:
+class FullWebSocketPool:
     FIRST = 1
     RANDOM = 2
 
@@ -304,4 +310,80 @@ class FullConnectPool:
             assert not client.connected
             raise Retry()
 
-pool = FullConnectPool()
+
+class SimpleHttpPool:
+    ''' short term HTTP request '''
+    FIRST = 1
+    RANDOM = 2
+
+    def __init__(self):
+        self.pool = {}
+        self.policy = self.RANDOM
+
+    def get_client(self, srv, policy=None, boxid=None):
+        policy = policy or self.policy
+        connects = []
+        cc = get_cluster()
+        for bind in cc.route[srv]:
+            if boxid:
+                box = cc.boxes.get(bind)
+                if box.boxid != boxid:
+                    continue
+            if policy == self.FIRST:
+                connects.append(bind)
+                break
+            else:
+                assert policy == self.RANDOM
+                connects.append(bind)
+
+        if connects:
+            connect = random.choice(connects)
+            return HttpClient(connect, expect='json')
+
+    async def request(self, srv, method, *params, boxid=None, retry=0, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
+        if not req_id:
+            req_id = uuid.uuid4().hex
+        if has_service(srv):
+            # if local has srv,
+            # call it by default to avoid network failure
+            req = Request({
+                'id': req_id,
+                'params': params,
+                'method': '{}::{}'.format(srv, method)
+            })
+            return await req.handle()
+
+        for rty in range(retry + 1):
+            try:
+                return await self._request(
+                    srv, method,
+                    *params, boxid=None,
+                    req_id=req_id,
+                    timeout=timeout)
+            except Retry:
+                continue
+        raise ConnectionError(
+            'cannot retry connections')
+
+    async def _request(self, srv, method, *params, boxid=None, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
+        client = self.get_client(srv, boxid=boxid)
+        if not client:
+            raise ConnectionError(
+                'no available rpc server')
+
+        if not req_id:
+            req_id = uuid.uuid4().hex
+        try:
+            return await client.request(
+                srv, method,
+                *params,
+                req_id=req_id,
+                timeout=timeout)
+        except ConnectionError:
+            assert not client.connected
+            raise Retry()
+
+if os.getenv('BBOX_CONNECT_METHOD') in ('WEBSOCKET', 'WS'):
+    pool = FullWebSocketPool()
+else:
+    pool = SimpleHttpPool()
