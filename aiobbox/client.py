@@ -50,7 +50,7 @@ class HttpClient:
             'params': params
             }
         async with self.session.post(
-                url, json=payload, timeout=DEFAULT_TIMEOUT_SECS) as resp:
+                url, json=payload, timeout=timeout) as resp:
             if self.expect == 'text':
                 return await resp.text()
             else:
