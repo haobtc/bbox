@@ -340,6 +340,12 @@ class SimpleHttpPool:
             connect = random.choice(connects)
             return HttpClient(connect, expect='json')
 
+    def __getattr__(self, name):
+        return ServiceRef(name, self)
+
+    def __getitem__(self, name):
+        return ServiceRef(name, self)
+
     async def request(self, srv, method, *params, boxid=None, retry=0, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
         if not req_id:
             req_id = uuid.uuid4().hex
