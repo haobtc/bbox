@@ -21,14 +21,17 @@ async def create_consumer(request, consumer, reuse):
     createConsumer(consumer, reuse)
     create a consumer for test, note that this methods is *ONLY* used for testing. Production consumer can be created using `bbox.py run aiobbox.contrib.consumer.create_consumer <name>`
     '''
-    if not testing.test_mode:
+    cfg = get_sharedconfig()
+
+    allow_create_consumer = cfg.get('consumers', 'allow_create')
+    if not testing.test_mode and not allow_create_consumer:
         raise ServiceError('access denied')
 
     if (not isinstance(consumer, str)
         or not re.match(r'\w+$', consumer)):
         raise ServiceError('invalid consumer')
 
-    cfg = get_sharedconfig()
+
     coptions = cfg.get('consumers', consumer)
     #if coptions:
     #    raise ServiceError('consumer already exist',
