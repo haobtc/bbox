@@ -86,8 +86,10 @@ def localbox_ip(*iplist):
 
 def get_bbox_path(path):
     rel_path = '.bbox/{}'.format(path)
-    for path in [abs_path(rel_path),
-                 home_path(rel_path)]:
+    for path in [
+            abs_path(rel_path),
+            home_path(rel_path),
+            os.path.join('/etc/bbox', path)]:
         if os.path.exists(path):
             return path
 
