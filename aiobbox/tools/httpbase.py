@@ -35,6 +35,12 @@ class Handler(BaseHandler):
             default='',
             help='box id')
 
+        parser.add_argument(
+            '--ttl',
+            type=float,
+            default=3600 * 24, # one day
+            help='time to live')
+
     async def run(self, args):
         # start cluster client and box
         if not args.boxid:
@@ -54,6 +60,8 @@ class Handler(BaseHandler):
         await loop.create_server(http_handler,
                                  host, port,
                                  ssl=ssl_context)
+
+        asyncio.ensure_future(self.wait_ttl(args.ttl))
         await self.start(args)
         self.handler = handler
         self.http_handler = http_handler
@@ -64,3 +72,10 @@ class Handler(BaseHandler):
     def shutdown(self):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(get_box().deregister())
+
+    async def wait_ttl(self, ttl):
+        await asyncio.sleep(ttl)
+        logger.info('ttl expired, stoping')
+        await get_box().deregister()
+        logger.info('ttl expired, stopped')
+        sys.exit(0)

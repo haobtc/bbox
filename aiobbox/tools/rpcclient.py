@@ -43,7 +43,7 @@ class Handler(BaseHandler):
         parser.add_argument(
             '--pp',
             type=bool,
-            default=False,
+            default=True,
             help='pretty print')
 
         parser.add_argument(
