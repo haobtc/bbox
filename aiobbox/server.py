@@ -77,9 +77,9 @@ class Request:
         stats_name = None
         try:
             self.req_id = self.body.get('id')
-            if (not isinstance(self.req_id, str) or
+            if (not isinstance(self.req_id, (str, int)) or
                 self.req_id is None):
-                raise ServiceError('invalpid reqid',
+                raise ServiceError('inval reqid',
                                    '{}'.format(self.req_id))
 
             self.params = self.body.get('params', [])

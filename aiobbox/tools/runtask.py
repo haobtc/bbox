@@ -1,6 +1,5 @@
 import os, sys
 import logging
-import uuid
 import json
 import asyncio
 import argparse

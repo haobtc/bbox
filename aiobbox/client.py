@@ -7,10 +7,9 @@ from aiochannel import Channel
 from aiochannel.errors import ChannelClosed
 from urllib.parse import urljoin
 import json
-import uuid
 from aiobbox.cluster import get_cluster
 from aiobbox.exceptions import ConnectionError, Retry
-from aiobbox.utils import get_cert_ssl_context
+from aiobbox.utils import get_cert_ssl_context, next_request_id
 from aiobbox.server import has_service, Request
 
 logger = logging.getLogger('bbox')
@@ -42,7 +41,7 @@ class HttpClient:
 
         method = srv + '::' + method
         if req_id is None:
-            req_id = uuid.uuid4().hex
+            req_id = next_request_id()
         payload = {
             'jsonrpc': '2.0',
             'id': req_id,
@@ -108,7 +107,7 @@ class WebSocketClient:
 
         method = srv + '::' + method
         if not req_id:
-            req_id = uuid.uuid4().hex
+            req_id = next_request_id()
         payload = {
             'jsonrpc': '2.0',
             'id': req_id,
@@ -267,7 +266,7 @@ class FullWebSocketPool:
 
     async def request(self, srv, method, *params, boxid=None, retry=0, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
         if not req_id:
-            req_id = uuid.uuid4().hex
+            req_id = next_request_id()
         if has_service(srv):
             # if local has srv,
             # call it by default to avoid network failure
@@ -299,7 +298,7 @@ class FullWebSocketPool:
                 'no available rpc server')
 
         if not req_id:
-            req_id = uuid.uuid4().hex
+            req_id = next_request_id()
         try:
             return await client.request(
                 srv, method,
@@ -348,7 +347,7 @@ class SimpleHttpPool:
 
     async def request(self, srv, method, *params, boxid=None, retry=0, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
         if not req_id:
-            req_id = uuid.uuid4().hex
+            req_id = next_request_id()
         if has_service(srv):
             # if local has srv,
             # call it by default to avoid network failure
@@ -378,7 +377,7 @@ class SimpleHttpPool:
                 'no available rpc server')
 
         if not req_id:
-            req_id = uuid.uuid4().hex
+            req_id = next_request_id()
         try:
             return await client.request(
                 srv, method,

@@ -6,8 +6,8 @@ from aiochannel import Channel
 from aiochannel.errors import ChannelClosed
 from urllib.parse import urljoin
 import json
-import uuid
 from aiobbox.exceptions import ConnectionError, Retry
+from aiobbox.utils import next_request_id
 
 logger = logging.getLogger('bboxremote')
 
@@ -28,7 +28,7 @@ class HttpClient:
 
         method = srv + '::' + method
         payload = {
-            'id': uuid.uuid4().hex,
+            'id': next_request_id(),
             'method': method,
             'params': params
             }
@@ -84,7 +84,7 @@ class WebSocketClient:
 
         method = srv + '::' + method
         if not req_id:
-            req_id = uuid.uuid4().hex
+            req_id = next_request_id()
         payload = {
             'id': req_id,
             'method': method,

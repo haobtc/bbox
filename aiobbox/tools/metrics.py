@@ -1,7 +1,6 @@
 import os, sys
 import ssl
 import logging
-import uuid
 import json
 import asyncio
 from urllib.parse import urljoin

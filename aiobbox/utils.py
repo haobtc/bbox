@@ -118,3 +118,9 @@ def get_cert_ssl_context(ssl_prefix):
             purpose=ssl.Purpose.CLIENT_AUTH,
             cafile=ssl_cert)
         return ssl_context
+
+g_request_id = 0
+def next_request_id():
+    global g_request_id
+    g_request_id += 1
+    return g_request_id
