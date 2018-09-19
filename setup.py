@@ -9,7 +9,6 @@ setup(name='aiobbox',
       packages=find_packages(),
       scripts=['bin/bbox', 'bin/bbox.py', 'bin/bbox-gencert'],
       install_requires=[
-          'dateutil',
           'aiohttp',
           'aiochannel',
           'websockets',
