@@ -295,7 +295,7 @@ class FullWebSocketPool:
         client = self.get_client(srv, boxid=boxid)
         if not client:
             raise ConnectionError(
-                'no available rpc server')
+                'no available rpc server for {}'.format(srv))
 
         if not req_id:
             req_id = next_request_id()
@@ -374,7 +374,7 @@ class SimpleHttpPool:
         client = self.get_client(srv, boxid=boxid)
         if not client:
             raise ConnectionError(
-                'no available rpc server')
+                'no available rpc server for {}'.format(srv))
 
         if not req_id:
             req_id = next_request_id()

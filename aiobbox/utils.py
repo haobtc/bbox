@@ -2,28 +2,42 @@ import re
 import string
 import ssl
 import os
-import json
+from decimal import Decimal
+from json import (
+    JSONEncoder,
+    dumps as json_dumps,
+    loads as json_loads
+)
 import netifaces
 import random
+from datetime import datetime, date
 
 def guess_json(p):
     if p in ('null', 'true', 'false'):
-        p = json.loads(p)
+        p = json_loads(p)
     elif p.startswith('{') or p.startswith('['):
-        p = json.loads(p)
+        p = json_loads(p)
     elif p.startswith('"'):
-        p = json.loads(p)
+        p = json_loads(p)
     elif p.isdigit() or re.match(r'\-?\d+$', p):
         p = int(p)
     elif re.match(r'\-?\d*(\.\d+)?$', p):
         p = float(p)
     return p
 
+class BBoxJSONEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.replace(microsecond=0).isoformat()
+        elif isinstance(obj, (Decimal, date)):
+            return str(obj)
+        return JSONEncoder.default(self, obj)
+
 def json_pp(v):
-    return json.dumps(v, indent=2, sort_keys=True)
+    return json_dumps(v, indent=2, sort_keys=True, cls=BBoxJSONEncoder)
 
 def json_to_str(v):
-    return json.dumps(v, sort_keys=True)
+    return json_dumps(v, sort_keys=True, cls=BBoxJSONEncoder)
 
 def map_bytes_to_str(alist, encoding='utf-8'):
     return [v.decode(encoding) for v in alist]

@@ -4,6 +4,8 @@ import random
 import json
 import time
 import asyncio
+from datetime import datetime
+from dateutil.tz import tzlocal
 import aio_etcd as etcd
 from aiobbox.utils import json_to_str
 from aiobbox.exceptions import RegisterFailed, ETCDError
@@ -33,11 +35,11 @@ class BoxAgent(EtcdClient):
         await self.register()
         self.started = True
 
-
     def box_info(self, extbind=None):
         extbind = extbind or self.extbind
         return json_to_str({
             'bind': extbind,
+            'start_time': datetime.now(tzlocal()),
             'ssl': self.ssl_prefix,
             'boxid': self.boxid,
             'services': self.srv_names})
