@@ -50,14 +50,13 @@ def main():
     if handler is None:
         top_parser.print_help()
     else:
-        loop.run_until_complete(handler.run(args))
-        if getattr(handler, 'run_forever', False):
-            try:
+        try:
+            loop.run_until_complete(handler.run(args))
+            if getattr(handler, 'run_forever', False):
                 loop.run_forever()
-            except KeyboardInterrupt:
-                handler.shutdown()
-        else:
-            handler.shutdown()
+        except KeyboardInterrupt:
+            pass
+        handler.shutdown()
 
 if __name__ == '__main__':
     main()

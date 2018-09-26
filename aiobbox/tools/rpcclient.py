@@ -51,6 +51,11 @@ class Handler(BaseHandler):
             type=str,
             default='first',
             help='dispatch request to clients')
+        parser.add_argument(
+            '--timeout',
+            type=float,
+            default=bbox_client.DEFAULT_TIMEOUT_SECS,
+        )
 
         parser.add_argument(
             '--stack',
@@ -74,7 +79,8 @@ class Handler(BaseHandler):
                     srv,
                     method,
                     *ps,
-                    retry=args.retry)
+                    retry=args.retry,
+                    timeout=args.timeout)
                 if args.pp:
                     print(json_pp(r))
                 else:
