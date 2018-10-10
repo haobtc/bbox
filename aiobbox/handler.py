@@ -1,4 +1,5 @@
 class BaseHandler:
+    cont = True
     def add_arguments(self, parser):
         pass
 

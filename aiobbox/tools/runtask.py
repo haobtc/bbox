@@ -1,4 +1,5 @@
 import os, sys
+import signal
 import logging
 import json
 import asyncio
@@ -39,17 +40,35 @@ class Handler(BaseHandler):
         else:
             handler = BaseHandler()
 
+        loop = asyncio.get_event_loop()
+
+        loop.add_signal_handler(
+            signal.SIGINT,
+            self.handle_stop_sig,
+            handler)
+
         parser = argparse.ArgumentParser(prog='bbox.py run')
         handler.add_arguments(parser)
         sub_args = parser.parse_args(args.task_params)
         try:
             await get_cluster().start()
             r = await handler.run(sub_args)
-            if r:
+            if r is not None:
                 logger.debug('task return %s', r)
         finally:
+            handler.shutdown()
             c = get_cluster()
             c.cont = False
             await asyncio.sleep(0.1)
             c.close()
 
+    def handle_stop_sig(self, handler):
+        try:
+            logger.debug('sigint met, the handle %s should stop lately', handler)
+            handler.cont = False
+            loop = asyncio.get_event_loop()
+            loop.remove_signal_handler(signal.SIGINT)
+            loop.call_later(15, sys.exit, 0)  # force exit 15 seconds later
+        except:
+            logger.error('error on handle sigint', exc_info=True)
+            raise

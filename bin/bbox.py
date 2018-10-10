@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sys
+import signal
 import argparse
 import asyncio
 from aiobbox.log import config_log
@@ -46,6 +47,7 @@ def main():
 
     args = top_parser.parse_args()
     loop = asyncio.get_event_loop()
+
     handler = getattr(args, 'handler', None)
     if handler is None:
         top_parser.print_help()
