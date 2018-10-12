@@ -28,7 +28,8 @@ class BaseHandler:
         raise NotImplemented
 
     async def sleep(self, secs):
-        task = asyncio.create_task(asyncio.sleep(secs))
+        loop = asyncio.get_event_loop()
+        task = loop.create_task(asyncio.sleep(secs))
         self._sleep_tasks.append(task)
         try:
             return await task
