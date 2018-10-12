@@ -66,6 +66,7 @@ class Handler(BaseHandler):
         try:
             logger.debug('sigint met, the handle %s should stop lately', handler)
             handler.cont = False
+            handler.awake()
             loop = asyncio.get_event_loop()
             loop.remove_signal_handler(signal.SIGINT)
             loop.call_later(15, sys.exit, 0)  # force exit 15 seconds later
