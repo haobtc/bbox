@@ -1,5 +1,6 @@
 import logging
 import asyncio
+from aiobbox.utils import sleep
 
 class BaseHandler:
     cont = True
@@ -28,20 +29,4 @@ class BaseHandler:
         raise NotImplemented
 
     async def sleep(self, secs):
-        loop = asyncio.get_event_loop()
-        task = loop.create_task(asyncio.sleep(secs))
-        self._sleep_tasks.append(task)
-        try:
-            return await task
-        except asyncio.CancelledError:
-            logging.info('handler %s been cancelled', self)
-        finally:
-            try:
-                self._sleep_tasks.remove(task)
-            except ValueError:
-                # in case task is not in sleep_tasks
-                pass
-
-    def awake(self):
-        for task in self._sleep_tasks:
-            task.cancel()
+        return await sleep(secs)

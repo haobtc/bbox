@@ -3,6 +3,7 @@ import asyncio
 import urllib.parse as urlparse
 from aiobbox.server import Service, ServiceError, Request
 from aiobbox.cluster import get_box
+from aiobbox.utils import sleep
 
 srv = Service()
 def _add2num(a:int, b:int) -> int:
@@ -14,7 +15,7 @@ async def add2num(request, a, b):
 
 @srv.method('add2sleep')
 async def add2sleep(request, a, b, sec):
-    await asyncio.sleep(sec)
+    await sleep(sec)
     return a + b
 
 @srv.method('echostr')

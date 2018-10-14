@@ -1,4 +1,7 @@
 import re
+import weakref
+import logging
+import asyncio
 import string
 import ssl
 import os
@@ -138,3 +141,26 @@ def next_request_id():
     global g_request_id
     g_request_id += 1
     return g_request_id
+
+g_sleep_tasks = weakref.WeakSet()
+async def sleep(secs):
+    '''
+    Interruptable sleep task
+    '''
+    loop = asyncio.get_event_loop()
+    task = loop.create_task(asyncio.sleep(secs))
+    g_sleep_tasks.add(task)
+    try:
+        return await task
+    except asyncio.CancelledError:
+        logging.debug('sleep task %s cancelled', task)
+    finally:
+        try:
+            g_sleep_tasks.remove(task)
+        except KeyError:
+            # in case task is not in sleep_tasks
+            logging.warn('sleep task %s is not in list', task)
+
+def wakeup_sleep_tasks():
+    for task in g_sleep_tasks:
+        task.cancel()

@@ -1,4 +1,5 @@
 import os, sys
+import shlex
 import signal
 import logging
 import json
@@ -14,18 +15,13 @@ from aiobbox.handler import BaseHandler
 logger = logging.getLogger('bbox')
 
 class Handler(BaseHandler):
-    help = 'run bbox tasks'
+    help = 'run multiple bbox tasks'
     def add_arguments(self, parser):
         parser.add_argument(
-            'module',
+            'taskspec',
             type=str,
-            help='the task module to load')
-
-        parser.add_argument(
-            'task_params',
-            type=str,
-            nargs='*',
-            help='task arguments')
+            nargs='+',
+            help='the task specs to load')
 
     async def run(self, args):
         cfg = get_ticket()
@@ -33,28 +29,33 @@ class Handler(BaseHandler):
             print('language must be python3', file=sys.stderr)
             sys.exit(1)
 
-        mod = import_module(args.module)
+        cors = []
+        handlers = []
+        for spec in args.taskspec:
+            args = shlex.split(spec)
+            module, task_params = args[0], args[1:]
+            mod = import_module(module)
+            if hasattr(mod, 'Handler'):
+                handler = mod.Handler()
+            else:
+                handler = BaseHandler()
 
-        if hasattr(mod, 'Handler'):
-            handler = mod.Handler()
-        else:
-            handler = BaseHandler()
+            parser = argparse.ArgumentParser(prog='bbox.py mrun {}'.format(module))
+            handler.add_arguments(parser)
+            sub_args = parser.parse_args(task_params)
+            handlers.append(handler)
+            cors.append(self.run_handler(handler, sub_args))
 
         loop = asyncio.get_event_loop()
 
         loop.add_signal_handler(
             signal.SIGINT,
             self.handle_stop_sig,
-            handler)
+            handlers)
 
-        parser = argparse.ArgumentParser(prog='bbox.py run')
-        handler.add_arguments(parser)
-        sub_args = parser.parse_args(args.task_params)
         try:
             await get_cluster().start()
-            r = await handler.run(sub_args)
-            if r is not None:
-                logger.debug('task return %s', r)
+            await asyncio.gather(*cors)
         finally:
             handler.shutdown()
             c = get_cluster()
@@ -62,10 +63,19 @@ class Handler(BaseHandler):
             await asyncio.sleep(0.1)
             c.close()
 
-    def handle_stop_sig(self, handler):
+    async def run_handler(self, handler, args):
         try:
-            logger.debug('sigint met, the handle %s should stop lately', handler)
-            handler.cont = False
+            return await handler.run(args)
+        finally:
+            handler.shutdown()
+
+    def handle_stop_sig(self, handlers):
+        print('handle stop sig')
+        try:
+            logger.debug('sigint met, handlers %s should stop lately', handlers)
+            for handler in handlers:
+                handler.cont = False
+
             wakeup_sleep_tasks()
             loop = asyncio.get_event_loop()
             loop.remove_signal_handler(signal.SIGINT)

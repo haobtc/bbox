@@ -16,6 +16,7 @@ sub_modules = [
     ('start', 'aiobbox.tools.startbox'),
     ('httpd', 'aiobbox.tools.starthttpd'),
     ('run', 'aiobbox.tools.runtask'),
+    ('mrun', 'aiobbox.tools.runmultitasks'),
     ('ps', 'aiobbox.tools.ps'),
     ('rpc', 'aiobbox.tools.rpcclient'),
     ('config', 'aiobbox.tools.clusterconfig'),
