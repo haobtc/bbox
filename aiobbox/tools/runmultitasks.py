@@ -53,6 +53,11 @@ class Handler(BaseHandler):
             self.handle_stop_sig,
             handlers)
 
+        loop.add_signal_handler(
+            signal.SIGTERM,
+            self.handle_stop_sig,
+            handlers)
+
         try:
             await get_cluster().start()
             await asyncio.gather(*cors)
@@ -70,16 +75,21 @@ class Handler(BaseHandler):
             handler.shutdown()
 
     def handle_stop_sig(self, handlers):
-        print('handle stop sig')
         try:
             logger.debug('sigint met, handlers %s should stop lately', handlers)
+            get_cluster().stop()
             for handler in handlers:
                 handler.cont = False
 
             wakeup_sleep_tasks()
             loop = asyncio.get_event_loop()
             loop.remove_signal_handler(signal.SIGINT)
+            loop.remove_signal_handler(signal.TERM)
             loop.call_later(15, sys.exit, 0)  # force exit 15 seconds later
         except:
             logger.error('error on handle sigint', exc_info=True)
             raise
+
+def sys_exit():
+    sys.exit(0)
+

@@ -1,6 +1,7 @@
 import asyncio
 from aiobbox.handler import BaseHandler
 from aiobbox.utils import sleep
+from aiobbox.cluster import get_cluster
 
 """
 run multiple tasks
@@ -15,12 +16,13 @@ class Handler(BaseHandler):
 
     async def run(self, args):
         self.seq = args.seq
-        while self.cont:
+        while get_cluster().is_running():
             print(self.seq, 'step 1')
             await sleep(3)
 
         # will continue executing about 15 steps when pressing ctrl-c
         for _ in range(100):
+            print('stopping', get_cluster().is_stopping())
             print(self.seq, 'step 2')
             await sleep(1)
         print(self.seq, 'end')

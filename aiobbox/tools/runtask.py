@@ -47,6 +47,11 @@ class Handler(BaseHandler):
             self.handle_stop_sig,
             handler)
 
+        loop.add_signal_handler(
+            signal.SIGTERM,
+            self.handle_stop_sig,
+            handler)
+
         parser = argparse.ArgumentParser(prog='bbox.py run')
         handler.add_arguments(parser)
         sub_args = parser.parse_args(args.task_params)
@@ -65,11 +70,17 @@ class Handler(BaseHandler):
     def handle_stop_sig(self, handler):
         try:
             logger.debug('sigint met, the handle %s should stop lately', handler)
+            get_cluster().stop()
             handler.cont = False
             wakeup_sleep_tasks()
             loop = asyncio.get_event_loop()
             loop.remove_signal_handler(signal.SIGINT)
-            loop.call_later(15, sys.exit, 0)  # force exit 15 seconds later
+            loop.remove_signal_handler(signal.SIGTERM)
+            loop.call_later(5, sys_exit)  # force exit 15 seconds later
         except:
             logger.error('error on handle sigint', exc_info=True)
             raise
+
+def sys_exit():
+    sys.exit(0)
+

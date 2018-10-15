@@ -32,6 +32,16 @@ class ClientAgent(EtcdClient):
         asyncio.ensure_future(self._watch_configs())
         self.state = 'STARTED'
 
+    def stop(self):
+        self.state = 'STOPPING'
+
+    def is_started(self):
+        return self.state == 'STARTED'
+    is_running = is_started
+
+    def is_stopping(self):
+        return self.state == 'STOPPING'
+
     def get_local_boxes(self):
         for bind in self.boxes.keys():
             if localbox_ip(bind.split(':')[0]):
