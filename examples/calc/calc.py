@@ -15,8 +15,11 @@ async def add2num(request, a, b):
 
 @srv.method('add2sleep')
 async def add2sleep(request, a, b, sec):
+    print('add2sleep() would return after', sec, 'seconds')
     await sleep(sec)
-    return a + b
+    r = a + b
+    print('add2sleep() return', r)
+    return r
 
 @srv.method('echostr')
 async def echostr(request, msg):

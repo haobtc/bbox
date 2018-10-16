@@ -25,6 +25,8 @@ sub_modules = [
     ('printticket', 'aiobbox.tools.printticket'),
     ('doc', 'aiobbox.tools.printdoc'),
     ('metrics', 'aiobbox.tools.metrics'),
+    ('tunnel.begin', 'aiobbox.contrib.redis.tunnel_begin'),
+    ('tunnel.end', 'aiobbox.contrib.redis.tunnel_end')
     ]
 
 def main():
@@ -46,7 +48,10 @@ def main():
         handler.add_arguments(parser)
         parser.set_defaults(handler=handler)
 
-    args = top_parser.parse_args()
+    run(top_parser)
+
+def run(top_parser, input_args=None):
+    args = top_parser.parse_args(input_args)
     loop = asyncio.get_event_loop()
 
     handler = getattr(args, 'handler', None)

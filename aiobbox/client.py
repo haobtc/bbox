@@ -3,14 +3,14 @@ import sys, os
 import asyncio
 import random
 import aiohttp
-from aiochannel import Channel
-from aiochannel.errors import ChannelClosed
 from urllib.parse import urljoin
 import json
 from aiobbox.cluster import get_cluster
 from aiobbox.exceptions import ConnectionError, Retry
-from aiobbox.utils import get_cert_ssl_context, next_request_id
-from aiobbox.server import has_service, Request
+from aiobbox.utils import  get_cert_ssl_context, next_request_id
+
+from aiobbox.jsonrpc import Request
+from aiobbox.server import has_service, ServiceRequest
 
 logger = logging.getLogger('bbox')
 
@@ -36,20 +36,24 @@ class HttpClient:
         self.session = aiohttp.ClientSession(connector=conn)
 
     async def request(self, srv, method, *params, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
-        url = urljoin(self.url_prefix,
-                      '/jsonrpc/2.0/api')
-
-        method = srv + '::' + method
+        '''
+        self.request() is an outdated method, use self.request_obj instead
+        '''
         if req_id is None:
             req_id = next_request_id()
-        payload = {
-            'jsonrpc': '2.0',
-            'id': req_id,
-            'method': method,
-            'params': params
-            }
+        req = Request.make(req_id, srv, method, *params)
+        return await self.request_obj(req, timeout=timeout)
+
+    async def request_obj(self, req, timeout=DEFAULT_TIMEOUT_SECS):
+        url = urljoin(self.url_prefix,
+                      '/jsonrpc/2.0/api')
+        payload = req.as_json()
+        headers = {'X-Bbox-Expect-Timeout': str(timeout)}
         async with self.session.post(
-                url, json=payload, timeout=timeout) as resp:
+                url,
+                headers=headers,
+                json=payload,
+                timeout=timeout) as resp:
             if self.expect == 'text':
                 return await resp.text()
             else:
@@ -57,122 +61,6 @@ class HttpClient:
 
     def __del__(self):
         self.session = None
-
-class WebSocketClient:
-    def __init__(self, connect):
-        c = get_cluster()
-        box = c.boxes[connect]
-        self.ssl_prefix = box['ssl']
-        if self.ssl_prefix:
-            self.url_prefix = 'wss://' + connect
-        else:
-            self.url_prefix = 'ws://' + connect
-
-        ssl_context = get_cert_ssl_context(self.ssl_prefix)
-        conn = aiohttp.TCPConnector(ssl_context=ssl_context)
-        self.session = aiohttp.ClientSession(connector=conn)
-        self.waiters = {}
-        self.ws = None
-        self.notify_channel = None
-        self.cont = True
-
-        asyncio.ensure_future(self.connect_wait())
-
-    @property
-    def connected(self):
-        return not not self.ws
-
-    def close(self):
-        self.cont = False
-        if self.ws:
-            self.ws.close()
-            self.ws = None
-
-    async def connect(self):
-        if self.ws:
-            logger.debug('connect to %s already connected',
-                          self.url_prefix)
-            return
-
-        url = self.url_prefix + '/jsonrpc/2.0/ws'
-        try:
-            ws = await self.session.ws_connect(url, autoclose=False, autoping=False, heartbeat=1.0)
-            self.ws = ws
-        except OSError:
-            logger.warn('OSError, connect to %s failed', url)
-
-    async def request(self, srv, method, *params, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
-        if not self.connected:
-            raise ConnectionError('websocket closed')
-
-        method = srv + '::' + method
-        if not req_id:
-            req_id = next_request_id()
-        payload = {
-            'jsonrpc': '2.0',
-            'id': req_id,
-            'method': method,
-            'params': params
-            }
-
-        channel = Channel(1)
-        self.waiters[req_id] = channel
-        try:
-            await self.ws.send_json(payload)
-            r = await asyncio.wait_for(
-                channel.get(),
-                timeout=timeout)
-            return r
-        except ChannelClosed:
-            raise ConnectionError(
-                'websocket closed on sending req')
-        finally:
-            channel.close()
-
-    async def onclosed(self):
-        self.ws = None
-        for req_id, channel in self.waiters.items():
-            channel.close()
-        self.session.close()
-        self.waiters = {}
-
-    async def connect_wait(self):
-        while self.cont:
-            if not self.ws:
-                await self.connect()
-            if not self.ws:
-                await asyncio.sleep(1.0)
-                continue
-            msg = await self.ws.receive()
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                data = json.loads(msg.data)
-            elif msg.type == aiohttp.WSMsgType.BINARY:
-                continue
-            elif msg.type == aiohttp.WSMsgType.PING:
-                self.ws.pong()
-                continue
-            elif msg.type == aiohttp.WSMsgType.PONG:
-                continue
-            elif msg.type == aiohttp.WSMsgType.CLOSE:
-                return await self.onclosed()
-            elif msg.type == aiohttp.WSMsgType.ERROR:
-                logger.debug('error during received %s',
-                              self.ws.exception() if self.ws else None)
-                return await self.onclosed()
-            elif msg.type == aiohttp.WSMsgType.CLOSED:
-                logger.debug('websocket closed')
-                return
-
-            req_id = data.get('id')
-            if req_id is not None:
-                channel = self.waiters.get(req_id)
-                if channel:
-                    del self.waiters[req_id]
-                    await channel.put(data)
-                else:
-                    logger.warn('Cannot find channel by id ', req_id)
-            else:
-                logger.debug('no reqid seems a notify', data)
 
 class MethodRef:
     def __init__(self, name, srv_ref):
@@ -194,122 +82,6 @@ class ServiceRef:
     def __getattr__(self, name):
         return MethodRef(name, self)
 
-class FullWebSocketPool:
-    FIRST = 1
-    RANDOM = 2
-
-    def __init__(self):
-        self.pool = {}
-        self.policy = self.FIRST
-        self.max_concurrency = 10
-
-    async def ensure_clients(self, srv):
-        if has_service(srv):
-            return
-        agent = get_cluster()
-        boxes = agent.route[srv]
-
-        # connect at most n concurrent connections
-        for bind in sorted(boxes)[:self.max_concurrency]:
-            if bind not in self.pool:
-                # add box to pool
-                box = agent.boxes[bind]
-                client = WebSocketClient(bind)
-                self.pool[bind] = client
-
-        for bind, client in list(self.pool.items()):
-            if bind not in agent.boxes:
-                logger.warn('remove box %s', bind)
-                # remove box due to server done
-                client.close()
-                del self.pool[bind]
-
-        for _ in range(30):
-            c = self.get_client(srv, policy=self.FIRST)
-            if c:
-                return
-            await asyncio.sleep(0.01)
-
-    def get_client_count(self, srv):
-        cc = get_cluster()
-        cnt = 0
-        for bind in cc.route[srv]:
-            client = self.pool.get(bind)
-            if client and client.connected:
-                cnt += 1
-        return cnt
-
-    def get_client(self, srv, policy=None, boxid=None):
-        policy = policy or self.policy
-        clients = []
-        cc = get_cluster()
-        for bind in cc.route[srv]:
-            client = self.pool.get(bind)
-            if client and client.connected:
-                if boxid:
-                    box = cc.boxes.get(bind)
-                    if box.boxid != boxid:
-                        continue
-                if policy == self.FIRST:
-                    return client
-                else:
-                    assert policy == self.RANDOM
-                    clients.append(client)
-        if clients:
-            return random.choice(clients)
-
-    def __getattr__(self, name):
-        return ServiceRef(name, self)
-
-    def __getitem__(self, name):
-        return ServiceRef(name, self)
-
-    async def request(self, srv, method, *params, boxid=None, retry=0, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
-        if not req_id:
-            req_id = next_request_id()
-        if has_service(srv):
-            # if local has srv,
-            # call it by default to avoid network failure
-            req = Request({
-                'id': req_id,
-                'params': params,
-                'method': '{}::{}'.format(srv, method)
-            })
-            return await req.handle()
-
-        for rty in range(retry + 1):
-            try:
-                return await self._request(
-                    srv, method,
-                    *params, boxid=None,
-                    req_id=req_id,
-                    timeout=timeout
-                )
-            except Retry:
-                continue
-        raise ConnectionError(
-            'cannot retry connections')
-
-    async def _request(self, srv, method, *params, boxid=None, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
-        await self.ensure_clients(srv)
-        client = self.get_client(srv, boxid=boxid)
-        if not client:
-            raise ConnectionError(
-                'no available rpc server for {}'.format(srv))
-
-        if not req_id:
-            req_id = next_request_id()
-        try:
-            return await client.request(
-                srv, method,
-                *params,
-                req_id=req_id,
-                timeout=timeout)
-        except ConnectionError:
-            assert not client.connected
-            raise Retry()
-
-
 class SimpleHttpPool:
     ''' short term HTTP request '''
     FIRST = 1
@@ -319,11 +91,11 @@ class SimpleHttpPool:
         self.pool = {}
         self.policy = self.RANDOM
 
-    def get_client(self, srv, policy=None, boxid=None):
+    def get_client(self, srv_name, policy=None, boxid=None):
         policy = policy or self.policy
         connects = []
         cc = get_cluster()
-        for bind in cc.route[srv]:
+        for bind in cc.route[srv_name]:
             if boxid:
                 box = cc.boxes.get(bind)
                 if box.boxid != boxid:
@@ -345,50 +117,40 @@ class SimpleHttpPool:
     def __getitem__(self, name):
         return ServiceRef(name, self)
 
-    async def request(self, srv, method, *params, boxid=None, retry=0, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
+    async def request(self, srv_name, method, *params, boxid=None, retry=0, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
         if not req_id:
             req_id = next_request_id()
-        if has_service(srv):
-            # if local has srv,
+        req = Request.make(req_id, srv_name, method, *params)
+        return await self.request_obj(req, timeout=timeout, retry=retry)
+
+    async def request_obj(self, req, timeout=DEFAULT_TIMEOUT_SECS, retry=0):
+        if has_service(req.srv_name):
+            # if local has srv_name,
             # call it by default to avoid network failure
-            req = Request({
-                'id': req_id,
-                'params': params,
-                'method': '{}::{}'.format(srv, method)
-            })
-            return await req.handle()
+            sreq = ServiceRequest.from_req(req)
+            return await sreq.handle()
 
         for rty in range(retry + 1):
             try:
-                return await self._request(
-                    srv, method,
-                    *params, boxid=None,
-                    req_id=req_id,
+                return await self._request_obj(
+                    req,
+                    boxid=None,
                     timeout=timeout)
             except Retry:
                 continue
         raise ConnectionError(
             'cannot retry connections')
 
-    async def _request(self, srv, method, *params, boxid=None, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
-        client = self.get_client(srv, boxid=boxid)
+    async def _request_obj(self, req, boxid=None, timeout=DEFAULT_TIMEOUT_SECS):
+        client = self.get_client(req.srv_name, boxid=boxid)
         if not client:
             raise ConnectionError(
-                'no available rpc server for {}'.format(srv))
-
-        if not req_id:
-            req_id = next_request_id()
+                'no available rpc server for {}'.format(req.srv_name))
         try:
-            return await client.request(
-                srv, method,
-                *params,
-                req_id=req_id,
-                timeout=timeout)
+            return await client.request_obj(
+                req, timeout=timeout)
         except ConnectionError:
             assert not client.connected
             raise Retry()
 
-if os.getenv('BBOX_CONNECT_METHOD') in ('WEBSOCKET', 'WS'):
-    pool = FullWebSocketPool()
-else:
-    pool = SimpleHttpPool()
+pool = SimpleHttpPool()

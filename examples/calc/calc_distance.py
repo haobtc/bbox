@@ -1,6 +1,6 @@
 import asyncio
 from aiobbox.cluster import get_cluster
-from aiobbox.client import pool
+from aiobbox.client import pool as srv_pool
 from aiobbox.handler import BaseHandler
 
 class Handler(BaseHandler):
@@ -16,6 +16,6 @@ class Handler(BaseHandler):
             #r = await pool.calc.echostr('888', retry=100)
          #   print(r)
          #   await asyncio.sleep(3)
-        r = await pool.calc.add2num(args.a, args.b)
+        r = await srv_pool.calc.add2num(args.a, args.b)
         print(r)
 

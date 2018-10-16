@@ -51,10 +51,6 @@ def import_module(spec):
         mod = getattr(mod, sec)
     return mod
 
-def parse_method(method):
-    return re.match(r'(?P<srv>\w[\.\w]*)::(?P<method>\w+)$',
-                    method)
-
 def parse_int(v):
     assert isinstance(v, int)
     return v
@@ -142,6 +138,8 @@ def next_request_id():
     g_request_id += 1
     return g_request_id
 
+
+# sleep tasks
 g_sleep_tasks = weakref.WeakSet()
 async def sleep(secs):
     '''

@@ -103,3 +103,5 @@ bbox.ticket.json
 certs/
 .DS_Store
 tmp/
+# redis
+dump.rdb

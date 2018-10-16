@@ -7,9 +7,10 @@ import json
 from aiohttp import web
 from functools import wraps
 from aiobbox import testing
+from aiobbox.jsonrpc import Request
 from aiobbox.cluster import get_box, get_cluster
-from aiobbox.exceptions import ServiceError
-from aiobbox.utils import parse_method, get_ssl_context, localbox_ip
+from aiobbox.exceptions import ServiceError, DataError
+from aiobbox.utils import get_ssl_context, localbox_ip
 from aiobbox.metrics import collect_metrics
 from aiobbox import stats
 
@@ -20,6 +21,9 @@ logger = logging.getLogger('bbox')
 
 def has_service(srv):
     return srv in srv_dict
+
+def srv_names(self):
+    return list(srv_dict.keys())
 
 class MethodRef:
     def __init__(self, fn, **kw):
@@ -66,58 +70,59 @@ class Service(object):
             'methods': arr
             }
 
-class Request:
+class ServiceRequest:
+    srv = None
+    req = None
+
+    @classmethod
+    def from_req(self, req):
+        assert isinstance(req, Request)
+        self.req = req
+
     def __init__(self, body):
         self.body = body
-        self.req_id = None
-        self.params = None
-        self.srv = None
 
     async def handle(self):
         stats_name = None
         try:
-            self.req_id = self.body.get('id')
-            if (not isinstance(self.req_id, (str, int)) or
-                self.req_id is None):
-                raise ServiceError('inval reqid',
-                                   '{}'.format(self.req_id))
-
-            self.params = self.body.get('params', [])
-
-            method = self.body['method']
-            if not isinstance(method, str):
-                raise ServiceError('invalid method',
-                                   'method should be string')
-
-            m = parse_method(method)
-            if not m:
-                raise ServiceError('invalid method',
-                                   'Method should be ID::ID')
-
-            srv_name = m.group('srv')
-            self.method = m.group('method')
-            self.srv = srv_dict.get(srv_name)
+            if self.req is None:
+                self.req = Request(self.body)
+            self.srv = srv_dict.get(self.req.srv_name)
             if not self.srv:
                 raise ServiceError(
                     'service not found',
-                    'server {} not found'.format(srv_name))
+                    'server {} not found'.format(self.req.srv_name))
 
-            if self.method == '__doc__':
-                docs = self.srv.get_docs(srv_name)
+            if self.req.method == '__doc__':
+                docs = self.srv.get_docs(self.req.srv_name)
                 resp = {
                     'jsonrpc': '2.0',
-                    'id': self.req_id,
+                    'id': self.req.req_id,
                     'result': docs
                     }
             else:
                 try:
-                    method_ref = self.srv.methods[self.method]
+                    method_ref = self.srv.methods[self.req.method]
                 except KeyError:
                     raise ServiceError(
                         'method not found',
                         'Method {} does not exist'.format(
-                            self.method))
-                resp = await self.call_method(method_ref, srv_name)
+                            self.req.method))
+                resp = await self.call_method(method_ref, self.req.srv_name)
+        except DataError as e:
+            error_info = {
+                'message': str(e),
+                'code': 'request parse error'
+            }
+            logger.warn(
+                'json rpc error on parsing %s',
+                self.req.body,
+                exc_info=True)
+            resp = {
+                'jsonrpc': '2.0',
+                'error': error_info,
+                'id': self.req.body.get('id')
+            }
         except ServiceError as e:
             error_info = {
                 'message': getattr(e, 'message', str(e)),
@@ -125,17 +130,17 @@ class Request:
             }
             logger.warn(
                 'service error on JSON-RPC id %s',
-                self.req_id,
+                self.req.req_id,
                 exc_info=True)
             resp = {
                 'jsonrpc': '2.0',
                 'error': error_info,
-                'id': self.req_id}
+                'id': self.req.req_id}
         except Exception as e:
             import traceback
             traceback.print_exc()
             logger.error('error on JSON-RPC id %s',
-                          self.req_id,
+                          self.req.req_id,
                           exc_info=True)
 
             if stats_name:
@@ -153,18 +158,18 @@ class Request:
             if DEBUG:
                 error_info['stack'] = traceback.format_exc()
             resp = {'error': error_info,
-                    'id': self.req_id,
+                    'id': self.req.req_id,
                     'jsonrpc': '2.0'}
         return resp
 
     async def call_method(self, method_ref, srv_name):
             start_time = time.time()
             stats_name = '/{}/{}'.format(
-                srv_name, self.method)
+                srv_name, self.req.method)
             stats.rpc_request_count.incr(stats_name)
-            res = await method_ref.fn(self, *self.params)
+            res = await method_ref.fn(self, *self.req.params)
             resp = {'result': res,
-                    'id': self.req_id,
+                    'id': self.req.req_id,
                     'jsonrpc': '2.0'}
             end_time = time.time()
             if end_time - start_time > 1.0:
@@ -179,8 +184,8 @@ class Request:
 
 async def handle(request):
     body = await request.json()
-    req = Request(body)
-    resp = await req.handle()
+    sreq = ServiceRequest(body)
+    resp = await sreq.handle()
     return web.json_response(resp)
 
 async def handle_ws(request):
@@ -189,7 +194,7 @@ async def handle_ws(request):
 
     async for req_msg in ws:
         body = json.loads(req_msg.data)
-        req = Request(body)
+        req = ServiceRequest(body)
         asyncio.ensure_future(req.handle_ws(ws))
 
 async def index(request):

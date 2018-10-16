@@ -16,6 +16,9 @@ class Retry(Exception):
 class Stop(Exception):
     pass
 
+class DataError(BaseError):
+    pass
+
 class ServiceError(Exception):
     def __init__(self, code, msg=None):
         self.code = code
