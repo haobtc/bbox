@@ -66,7 +66,8 @@ class RedisTunnel:
         else:
             raise asyncio.TimeoutError from None
 
-    async def take_jobs(self, parallel=False):
+    async def take_jobs(self, whitelist=None, parallel=False):
+        self.whitelist = whitelist
         redis_pool = await self.get_redis_pool()
         while get_cluster().is_running():
             key, body = await redis_pool.execute(
@@ -80,17 +81,27 @@ class RedisTunnel:
 
     async def handle_req(self, body):
         req = Request(body)
-        timeout = int(body.get('timeout', DEFAULT_TIMEOUT_SECS))
-        redis_pool = await self.get_redis_pool()
+        timeout = int(body.get(
+            'timeout',
+            DEFAULT_TIMEOUT_SECS))
+        if not req.allowed(self.whitelist):
+            res = req.error_response('method not allowed').as_json()
+            return await self.respond(res, req, timeout)
+
         try:
             res = await srv_pool.request_obj(
                 req,
                 timeout=timeout)
+            return await self.respond(res, req, timeout)
         except asyncio.TimeoutError:
             logger.warn('proxy request %s timeout', req.full_method, exc_info=True)
             res = req.error_response(
                 {'code': 'timeout',
                  'message': 'request {} timeout'.format(req.full_method)}).as_json()
+            return await self.respond(res, req, timeout)
+
+    async def respond(self, res, req, timeout):
+        redis_pool = await self.get_redis_pool()
         if req.req_id:
             res_key = 'tunnel.res.{}'.format(req.req_id)
             await redis_pool.execute('LPUSH', res_key, json_to_str(res))

@@ -25,14 +25,23 @@ class Handler(BaseHandler):
             default=3600 * 24,  # one day
             help='time to live')
 
+        parser.add_argument(
+            '-a', '--allow',
+            type=str,
+            help='allowed list of methods or srvs')
+
     async def run(self, args):
+        if args.allow:
+            whitelist = set(args.allow.split(','))
+        else:
+            whitelist = None
         # start cluster client
         await get_cluster().start()
 
         tunnel = RedisTunnel(args.url)
         asyncio.ensure_future(self.wait_ttl(args.ttl))
 
-        await tunnel.take_jobs()
+        await tunnel.take_jobs(whitelist=whitelist)
 
     async def wait_ttl(self, ttl):
         await asyncio.sleep(ttl)

@@ -28,8 +28,8 @@ async def handle_rpc(request):
         return web.HTTPBadRequest('json parse error')
 
     if _whitelist is not None:
-        if body['method'] not in _whitelist:
-            logger.warn('method not in whitelist')
+        if not req.allowed(_whitelist):
+            logger.warn('method not allowed')
             return web.HTTPForbidden()
 
     try:

@@ -82,6 +82,12 @@ class Request:
             'result': result
         })
 
+    def allowed(self, whitelist):
+        if not whitelist:
+            return True
+        return (self.full_method in whitelist or
+                self.srv_name in whitelist)
+
 class Response:
     error = None
     result = None
