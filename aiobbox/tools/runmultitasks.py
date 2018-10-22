@@ -85,7 +85,8 @@ class Handler(BaseHandler):
             loop = asyncio.get_event_loop()
             loop.remove_signal_handler(signal.SIGINT)
             loop.remove_signal_handler(signal.TERM)
-            loop.call_later(15, sys.exit, 0)  # force exit 15 seconds later
+            exit_after = int(os.getenv('BBOX_TASK_EXIT_WAIT', 15))
+            loop.call_later(exit_after, sys.exit, 0)  # force exit 15 seconds or env:BBOX_TASK_EXIT_WAIT later
         except:
             logger.error('error on handle sigint', exc_info=True)
             raise
