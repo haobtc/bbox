@@ -173,6 +173,12 @@ class ServiceRequest:
                     'jsonrpc': '2.0'}
             end_time = time.time()
             if end_time - start_time > 1.0:
+                logging.warn(
+                    'long bbox method execution, '
+                    'method %s, box %s, used %s seconds',
+                    self.req.full_method,
+                    get_box().boxid,
+                    end_time - start_time)
                 stats.slow_rpc_request_count.incr(stats_name)
             return resp
 

@@ -1,4 +1,5 @@
 import logging
+import time
 import sys, os
 import asyncio
 import random
@@ -49,15 +50,24 @@ class HttpClient:
                       '/jsonrpc/2.0/api')
         payload = req.as_json()
         headers = {'X-Bbox-Expect-Timeout': str(timeout)}
-        async with self.session.post(
-                url,
-                headers=headers,
-                json=payload,
-                timeout=timeout) as resp:
-            if self.expect == 'text':
-                return await resp.text()
-            else:
-                return await resp.json()
+        req_start_time = time.time()
+        try:
+            async with self.session.post(
+                    url,
+                    headers=headers,
+                    json=payload,
+                    timeout=timeout) as resp:
+                if self.expect == 'text':
+                    return await resp.text()
+                else:
+                    return await resp.json()
+        finally:
+            used_time = time.time() - req_start_time
+            if used_time > 2.0:
+                logging.warn(
+                    'long bbox request, '
+                    'url %s, payload %s, used %s seconds',
+                    url, payload, used_time)
 
     def __del__(self):
         self.session = None
