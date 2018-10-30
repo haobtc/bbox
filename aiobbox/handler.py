@@ -4,6 +4,7 @@ from aiobbox.utils import sleep
 
 class BaseHandler:
     cont = True
+
     def __init__(self):
         self._sleep_tasks = []
 

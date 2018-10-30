@@ -98,6 +98,7 @@ class BoxAgent(EtcdClient):
             await self.delete(key)
         except ETCDError:
             pass
+        logging.debug('box %s deregistered from cluster', self.boxid)
 
     async def update(self):
         while self.cont:

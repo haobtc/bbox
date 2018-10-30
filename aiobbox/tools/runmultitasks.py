@@ -84,9 +84,9 @@ class Handler(BaseHandler):
             wakeup_sleep_tasks()
             loop = asyncio.get_event_loop()
             loop.remove_signal_handler(signal.SIGINT)
-            loop.remove_signal_handler(signal.TERM)
-            exit_after = int(os.getenv('BBOX_TASK_EXIT_WAIT', 15))
-            loop.call_later(exit_after, sys.exit, 0)  # force exit 15 seconds or env:BBOX_TASK_EXIT_WAIT later
+            loop.remove_signal_handler(signal.SIGTERM)
+            exit_after = int(os.getenv('BBOX_TASK_EXIT_WAIT', 10))
+            loop.call_later(exit_after, sys_exit)  # force exit 10 seconds or env:BBOX_TASK_EXIT_WAIT later
         except:
             logger.error('error on handle sigint', exc_info=True)
             raise

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import sys
+import logging
+import signal
 import signal
 import argparse
 import asyncio
@@ -58,6 +60,10 @@ def run(top_parser, input_args=None):
     if handler is None:
         top_parser.print_help()
     else:
+        loop.add_signal_handler(
+            signal.SIGTERM,
+            on_term_sig)
+
         try:
             loop.run_until_complete(handler.run(args))
             if getattr(handler, 'run_forever', False):
@@ -65,6 +71,9 @@ def run(top_parser, input_args=None):
         except KeyboardInterrupt:
             pass
         handler.shutdown()
+
+def on_term_sig():
+    raise KeyboardInterrupt()
 
 if __name__ == '__main__':
     main()
