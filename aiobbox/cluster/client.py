@@ -48,8 +48,6 @@ class ClientAgent(EtcdClient):
                 yield bind
 
     async def get_boxes(self, chg=None):
-        if chg:
-            logger.debug('get boxes on change %s', chg)
         new_route = defaultdict(list)
         boxes = {}
         try:

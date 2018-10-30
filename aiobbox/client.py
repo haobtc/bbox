@@ -6,8 +6,9 @@ import random
 import aiohttp
 from urllib.parse import urljoin
 import json
+from aiohttp import ClientConnectorError
 from aiobbox.cluster import get_cluster
-from aiobbox.exceptions import ConnectionError, Retry
+from aiobbox.exceptions import ConnectionError, Retry, NoServiceFound
 from aiobbox.utils import  get_cert_ssl_context, next_request_id
 
 from aiobbox.jsonrpc import Request
@@ -52,15 +53,22 @@ class HttpClient:
         headers = {'X-Bbox-Expect-Timeout': str(timeout)}
         req_start_time = time.time()
         try:
-            async with self.session.post(
-                    url,
-                    headers=headers,
-                    json=payload,
-                    timeout=timeout) as resp:
-                if self.expect == 'text':
-                    return await resp.text()
-                else:
-                    return await resp.json()
+            for i in range(2):
+                try:
+                    async with self.session.post(
+                            url,
+                            headers=headers,
+                            json=payload,
+                            timeout=timeout) as resp:
+                        if self.expect == 'text':
+                            return await resp.text()
+                        else:
+                            return await resp.json()
+                except ClientConnectorError:
+                    logging.warn("connect json rpc error %s, try refresh get_boxes and call again", url)
+                    await get_cluster().get_boxes()
+                    if i >= 1:
+                        raise
         finally:
             used_time = time.time() - req_start_time
             if used_time > 2.0:
@@ -154,8 +162,9 @@ class SimpleHttpPool:
     async def _request_obj(self, req, boxid=None, timeout=DEFAULT_TIMEOUT_SECS):
         client = self.get_client(req.srv_name, boxid=boxid)
         if not client:
-            raise ConnectionError(
-                'no available rpc server for {}'.format(req.srv_name))
+            raise NoServiceFound('no service found {}'.format(req.srv_name))
+            #raise ConnectionError(
+            #   'no available rpc server for {}'.format(req.srv_name))
         try:
             return await client.request_obj(
                 req, timeout=timeout)

@@ -4,6 +4,9 @@ class BaseError(Exception):
 class ConnectionError(BaseError):
     pass
 
+class NoServiceFound(BaseError):
+    pass
+
 class RegisterFailed(BaseError):
     pass
 

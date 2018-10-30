@@ -13,6 +13,7 @@ from .ticket import get_ticket
 logger = logging.getLogger('bbox')
 
 class EtcdClient:
+    etcdIndex = 0
     def path(self, p):
         cfg = get_ticket()
         if p.startswith('/'):
@@ -65,6 +66,7 @@ class EtcdClient:
     async def _wrap_etcd(self, fn, *args, **kw):
         try:
             r = await fn(*args, **kw)
+            self.etcdIndex = max(r.etcd_index, self.etcdIndex)
             self.client_failed = False
             return r
         except aiohttp.ClientError as e:
@@ -103,9 +105,12 @@ class EtcdClient:
                 yield cc
 
     async def watch_changes(self, component, changed):
-        last_index = None
+        await changed()
+        last_index = self.etcdIndex + 1
+
         while self.cont:
-            logger.debug('watching %s', component)
+            logger.debug('watching %s from index %s', component, last_index)
+            #print('watch', component, last_index)
             try:
                 # watch every 1 min to
                 # avoid timeout exception
@@ -114,8 +119,11 @@ class EtcdClient:
                               recursive=True,
                               waitIndex=last_index,
                               wait=True),
-                    timeout=60)
-                logging.debug('watched change %s', chg)
+                    timeout=10)
+                logger.debug(
+                    'watched change on %s, action %s, modified %s, etcd_index %s',
+                    component, chg.action, chg.modifiedIndex,
+                    chg.etcd_index)
                 last_index = chg.modifiedIndex + 1
                 await changed(chg)
             except asyncio.TimeoutError:

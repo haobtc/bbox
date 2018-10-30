@@ -5,12 +5,14 @@ import os
 import logging
 import asyncio
 from aiohttp import web
+from aiohttp import ClientConnectorError
 
+from aiobbox.cluster import get_cluster
 from aiobbox.exceptions import ServiceError
 from aiobbox.jsonrpc import Request, DataError
 
 from aiobbox.client import pool as srv_pool
-from aiobbox.exceptions import ConnectionError
+from aiobbox.exceptions import ConnectionError, NoServiceFound
 from aiobbox.handler import BaseHandler
 
 logger = logging.getLogger('bbox')
@@ -42,13 +44,22 @@ async def handle_rpc(request):
         r = await srv_pool.request_obj(
             req,
             timeout=timeout)
+        return web.json_response(r)
     except asyncio.TimeoutError:
         logging.warn('timeout error on request %s', req.full_method, exc_info=True)
-        return web.HTTPBadGateway()
+    except ClientConnectorError:
+        logger.warn('client connector error, method %s', req.method, exc_info=True)
+        await get_cluster().get_boxes()
     except ConnectionError:
         logger.warn('connect error on request %s', req.full_method, exc_info=True)
-        return web.HTTPBadGateway()
-    return web.json_response(r)
+        await get_cluster().get_boxes()
+    except NoServiceFound:
+        logger.warn('no service found for %s', req.full_method)
+        await get_cluster().get_boxes()
+        return web.HTTPNotFound()
+
+    return web.HTTPBadGateway()
+
 
 class Handler(BaseHandler):
     async def get_app(self, args):

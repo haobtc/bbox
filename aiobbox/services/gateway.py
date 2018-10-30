@@ -5,7 +5,7 @@ import asyncio
 from aiohttp import web
 from aiobbox.server import Service, ServiceError
 from aiobbox.client import pool as srv_pool
-from aiobbox.exceptions import ConnectionError
+from aiobbox.exceptions import ConnectionError, NoServiceFound
 from aiobbox.handler import BaseHandler
 
 # service
@@ -42,6 +42,9 @@ async def handle_req(request):
         r = await srv_pool.request(srv, method, webreq)
     except ConnectionError:
         return web.HTTPBadGateway()
+    except NoServiceFound as e:
+        return web.HTTPNotFound(str(e))
+
     if r['result']:
         res = r['result']
         if isinstance(res, str):
