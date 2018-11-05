@@ -13,7 +13,7 @@ import argparse
 import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.cluster import get_ticket
-from aiobbox.utils import import_module, abs_path
+from aiobbox.utils import import_module, abs_path, semanticbool
 from aiobbox.client import HttpClient
 from aiobbox.metrics import collect_cluster_metrics, report_box_failure
 
@@ -94,12 +94,12 @@ class Handler(HttpdHandler):
 
         parser.add_argument(
             '--export_cluster',
-            type=bool,
+            type=semanticbool,
             default=export_cluster,
             help='export the whole cluster info')
         parser.add_argument(
             '--collect_localbox',
-            type=bool,
+            type=semanticbool,
             default=collect_localbox,
             help='coll')
         parser.add_argument(

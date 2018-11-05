@@ -5,7 +5,7 @@ import asyncio
 import argparse
 import aiobbox.client as bbox_client
 from aiobbox.cluster import get_cluster
-from aiobbox.utils import guess_json, json_pp, json_to_str
+from aiobbox.utils import guess_json, json_pp, json_to_str, semanticbool
 from aiobbox.handler import BaseHandler
 
 class Handler(BaseHandler):
@@ -42,7 +42,7 @@ class Handler(BaseHandler):
 
         parser.add_argument(
             '--pp',
-            type=bool,
+            type=semanticbool,
             default=True,
             help='pretty print')
 
@@ -59,7 +59,7 @@ class Handler(BaseHandler):
 
         parser.add_argument(
             '--stack',
-            type=bool,
+            type=semanticbool,
             default=False,
             help='print error stack')
 

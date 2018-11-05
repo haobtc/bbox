@@ -28,6 +28,14 @@ def guess_json(p):
         p = float(p)
     return p
 
+def semanticbool(v):
+    if v.lower() in ('yes', 'true', 'ok', 'on', '1', 'y'):
+        return True
+    elif v.lower() in ('no', 'false', 'off', '0', 'n'):
+        return False
+    else:
+        raise ValueError()
+
 class BBoxJSONEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime):

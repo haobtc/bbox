@@ -5,7 +5,7 @@ import asyncio
 import argparse
 import aiobbox.client as bbox_client
 from aiobbox.cluster import get_cluster, get_sharedconfig
-from aiobbox.utils import guess_json, json_pp
+from aiobbox.utils import guess_json, json_pp, semanticbool
 from aiobbox.handler import BaseHandler
 
 async def get_config(args):
@@ -92,7 +92,7 @@ class Handler(BaseHandler):
             help='config file in json format')
         p.add_argument(
             '--purge',
-            type=bool,
+            type=semanticbool,
             default=False,
             help='delete old config items different from the local file')
         p.set_defaults(func=load_config)

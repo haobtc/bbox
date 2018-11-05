@@ -3,6 +3,7 @@ import uuid
 import json
 import argparse
 from aiobbox.handler import BaseHandler
+from aiobbox.utils import semanticbool
 
 class Handler(BaseHandler):
     help = 'init a bbox project folder'
@@ -15,7 +16,7 @@ class Handler(BaseHandler):
 
         parser.add_argument(
             '--home',
-            type=bool,
+            type=semanticbool,
             default=False,
             help='init to home dir or work dir')
 
