@@ -24,8 +24,7 @@ class Handler(BaseHandler):
             help='the task specs to load')
 
     async def run(self, args):
-        cfg = get_ticket()
-        if cfg.language != 'python3':
+        if get_ticket().language != 'python3':
             print('language must be python3', file=sys.stderr)
             sys.exit(1)
 

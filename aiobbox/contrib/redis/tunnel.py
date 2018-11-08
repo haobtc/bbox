@@ -1,10 +1,13 @@
+from typing import Dict, Any, List, Tuple, Union, Iterable, Set, Optional, Callable
+
 import uuid
 import logging
 import json
 import asyncio
 from aiohttp import web
+import ssl
 from urllib.parse import urlparse, parse_qs
-
+from argparse import Namespace
 from aiobbox.jsonrpc import Request
 from aiobbox.utils import json_to_str, get_ssl_context, localbox_ip
 from aiobbox.cluster import get_cluster, get_box
@@ -16,8 +19,9 @@ from .pool import get_pool
 logger = logging.getLogger('redistunnel')
 
 class RedisTunnel:
-    ssl_context = None
-    def __init__(self, tunnel_url):
+    ssl_context: Optional[ssl.SSLContext] = None
+
+    def __init__(self, tunnel_url:str) -> None:
         self.parsed = urlparse(tunnel_url)
         if self.parsed.query:
             qs = parse_qs(self.parsed.query)
@@ -28,7 +32,7 @@ class RedisTunnel:
         self.req_key = self.parsed.path[1:]
 
     @property
-    def redis_url(self):
+    def redis_url(self) -> str:
         return 'redis://{}'.format(self.parsed.netloc)
 
     async def get_redis_pool(self):
@@ -36,13 +40,13 @@ class RedisTunnel:
             self.redis_url,
             ssl=self.ssl_context)
 
-    async def request(self, srv, method, *params, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
+    async def request(self, srv:str, method:str, *params, req_id=None, timeout:float=DEFAULT_TIMEOUT_SECS) -> Dict[str, Any]:
         if req_id is None:
             req_id = uuid.uuid4().hex
         req = Request.make(req_id, srv, method, *params)
         return await self.request_obj(req, timeout=timeout)
 
-    async def request_obj(self, req, timeout=DEFAULT_TIMEOUT_SECS):
+    async def request_obj(self, req: Request, timeout:float=DEFAULT_TIMEOUT_SECS) -> Dict[str, Any]:
         tmp_req_id = uuid.uuid4().hex
         payload = req.as_json()
         timeout = int(timeout)
@@ -66,7 +70,7 @@ class RedisTunnel:
         else:
             raise asyncio.TimeoutError from None
 
-    async def take_jobs(self, whitelist=None, parallel=False):
+    async def take_jobs(self, whitelist:Optional[List[str]]=None, parallel:bool=False) -> None:
         self.whitelist = whitelist
         redis_pool = await self.get_redis_pool()
         while get_cluster().is_running():
@@ -79,7 +83,7 @@ class RedisTunnel:
             else:
                 await self.handle_req(body)
 
-    async def handle_req(self, body):
+    async def handle_req(self, body:Dict[str, Any]) -> Any:
         req = Request(body)
         timeout = int(body.get(
             'timeout',
@@ -100,14 +104,14 @@ class RedisTunnel:
                  'message': 'request {} timeout'.format(req.full_method)}).as_json()
             return await self.respond(res, req, timeout)
 
-    async def respond(self, res, req, timeout):
+    async def respond(self, res: Dict[str, Any], req:Request, timeout:float) -> None:
         redis_pool = await self.get_redis_pool()
         if req.req_id:
             res_key = 'tunnel.res.{}'.format(req.req_id)
             await redis_pool.execute('LPUSH', res_key, json_to_str(res))
             await redis_pool.execute('EXPIRE', res_key, timeout)
 
-    async def start_proxy_server(self, args):
+    async def start_proxy_server(self, args:Namespace) -> None:
         boxid = args.boxid
         ssl_context = get_ssl_context(args.ssl)
 
@@ -122,6 +126,7 @@ class RedisTunnel:
         host, port = curr_box.bind.split(':')
         if not localbox_ip(host):
             host = '0.0.0.0'
+
         logger.warn('box {} launched as {}'.format(
             curr_box.boxid,
             curr_box.bind))
@@ -129,9 +134,8 @@ class RedisTunnel:
         loop = asyncio.get_event_loop()
         srv = await loop.create_server(
             handler,
-            host, port,
+            host, int(port),
             ssl=ssl_context)
-        return srv, handler
 
     async def proxy_requests(self, request):
         try:

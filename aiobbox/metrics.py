@@ -1,35 +1,50 @@
+from typing import Dict, Any, List, Tuple, Union, Iterable, Optional
 import asyncio
 from collections import defaultdict
 from aiobbox.cluster import get_cluster
 
-_metrics = []
+MEntry = Tuple[Dict[str, Any], float]
 
-def add_metrics(obj):
-    assert getattr(obj, 'name', None)
-    assert getattr(obj, 'help', None)
-    assert getattr(obj, 'type', None)
-    assert hasattr(obj, 'collect')
-    _metrics.append(obj)
+class IMetricsEntry:
+    #name: Optional[str] = None
+    #help: Optional[str] = None
+    #type: Optional[str] = 'gauge'
+    name: str = ''
+    help: str = ''
+    type: str = 'gauge'
+    field_name: str = ''
+
+    async def collect(self) -> List[MEntry]:
+        raise NotImplemented
+
+_metrics: List[IMetricsEntry] = []
+
+def add_metrics(entry:IMetricsEntry) -> None:
+    assert getattr(entry, 'name', None)
+    assert getattr(entry, 'help', None)
+    assert getattr(entry, 'type', None)
+    #assert hasattr(entry, 'collect')
+    _metrics.append(entry)
 
 async def collect_metrics():
     results = await asyncio.gather(
-        *[obj.collect() for obj in _metrics])
+        *[entry.collect() for entry in _metrics])
 
     meta = {}
     lines = []
-    for obj, res in zip(_metrics, results):
-        meta[obj.name] = {
-            'help': obj.help,
-            'type': obj.type
+    for entry, res in zip(_metrics, results):
+        meta[entry.name] = {
+            'help': entry.help,
+            'type': entry.type
         }
         for labels, v in res:
-            lines.append((obj.name, labels, v))
+            lines.append((entry.name, labels, v))
     return {
         'meta': meta,
         'lines': lines
         }
 
-def collect_cluster_metrics():
+def collect_cluster_metrics() -> Dict[str, Any]:
     cluster = get_cluster()
     meta = {
         'service_boxes': {
@@ -49,7 +64,7 @@ def collect_cluster_metrics():
         'lines': lines
         }
 
-def report_box_failure(bind):
+def report_box_failure(bind:str) -> Dict[str, Any]:
     meta = {
         'box_fail': {
             'type': 'gauge',
@@ -67,34 +82,26 @@ def report_box_failure(bind):
         'lines': lines
         }
 
-class MetricsCount:
-    name = None
-    help = None
-    field_name = None
-    type = 'gauge'
+class MetricsCount(IMetricsEntry):
+    values:Dict[str, float] = defaultdict(int)
 
-    values = defaultdict(int)
-    def incr(self, coin):
+    def incr(self, coin:str) -> None:
         self.values[coin] += 1
 
-    async def collect(self):
-        metr = []
+    async def collect(self) -> List[MEntry]:
+        metr: List[MEntry] = []
         for coin, cnt in self.values.items():
-            metr.append(({self.field_name: coin}, cnt))
+            mentry: MEntry = ({self.field_name: coin}, cnt)
+            metr.append(mentry)
         self.values.clear()
         return metr
 
-class MetricsAmount:
-    name = None
-    help = None
-    field_name = None
-    type = 'gauge'
-
-    values = defaultdict(float)
-    def add(self, key, amount):
+class MetricsAmount(IMetricsEntry):
+    values:Dict[str, float] = defaultdict(float)
+    def add(self, key:str, amount:float) -> None:
         self.values[key] += amount
 
-    async def collect(self):
+    async def collect(self) -> List[MEntry]:
         metr = []
         for key, cnt in self.values.items():
             metr.append(({self.field_name: key}, cnt))

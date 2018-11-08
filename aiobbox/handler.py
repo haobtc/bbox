@@ -1,33 +1,36 @@
+from typing import Dict, Any, List, Union, Iterable, Set
 import logging
+from argparse import Namespace, ArgumentParser
 import asyncio
 from aiobbox.utils import sleep
 
 class BaseHandler:
-    cont = True
+    cont: bool = True
+    help: str = ''
 
     def __init__(self):
         self._sleep_tasks = []
 
-    def add_arguments(self, parser):
+    def add_arguments(self, parser: ArgumentParser) -> None:
         pass
 
-    async def start(self, args):
+    async def start(self, args: Namespace) -> None:
         pass
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         pass
 
-    async def get_app(self, args):
+    async def get_app(self, args: Namespace) -> Any:
         '''
         Called by starthttpd
         '''
         raise NotImplemented
 
-    async def run(self, args):
+    async def run(self, args: Namespace) -> None:
         '''
         Called by runtask
         '''
         raise NotImplemented
 
-    async def sleep(self, secs):
+    async def sleep(self, secs: float) -> Any:
         return await sleep(secs)

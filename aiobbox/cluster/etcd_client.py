@@ -1,31 +1,34 @@
+from typing import Dict, Any, List, Tuple, Union, Iterable, Set, Optional, Callable
 import logging
 import uuid
 import re
 import random
 import asyncio
 import aio_etcd as etcd
-from aio_etcd.lock import Lock
+#from aio_etcd.lock import Lock
 import aiohttp
 from collections import defaultdict
 from aiobbox.exceptions import ETCDError
 from .ticket import get_ticket
 
+WrappedETCDFunc = Callable[..., Any]
+
 logger = logging.getLogger('bbox')
 
 class EtcdClient:
     etcdIndex = 0
-    def path(self, p):
-        cfg = get_ticket()
+    def path(self, p:str) -> str:
+        ticket = get_ticket()
         if p.startswith('/'):
-            return '/{}{}'.format(cfg.prefix, p)
+            return '/{}{}'.format(ticket.prefix, p)
         else:
-            return '/{}/{}'.format(cfg.prefix, p)
+            return '/{}/{}'.format(ticket.prefix, p)
 
     @property
-    def prefix(self):
+    def prefix(self) -> str:
         return get_ticket().prefix
 
-    def connect(self):
+    def connect(self) -> None:
         self.client = None
         self.client_failed = False
         self.cont = True
@@ -45,25 +48,26 @@ class EtcdClient:
                 allow_reconnect=True,
                 allow_redirect=True)
         else:
-            def split_addr(e):
+            def split_addr(e:str) -> Tuple[str, int]:
                 host, port = e.split(':')
                 return host, int(port)
 
-            host = tuple(split_addr(e)
-                         for e in etcd_list)
+            host_list = [split_addr(e)
+                         for e in etcd_list]
+
             self.client = etcd.Client(
-                host=host,
+                host=tuple(host_list),
                 protocol=protocol,
                 allow_reconnect=True,
                 allow_redirect=True)
 
-    def close(self):
+    def close(self) -> None:
         if self.client:
             self.client.close()
         self.cont = False
 
     # etcd client wraps
-    async def _wrap_etcd(self, fn, *args, **kw):
+    async def _wrap_etcd(self, fn:WrappedETCDFunc, *args, **kw) -> Any:
         try:
             r = await fn(*args, **kw)
             self.etcdIndex = max(r.etcd_index, self.etcdIndex)
@@ -137,13 +141,11 @@ class EtcdClient:
 
 
     def acquire_lock(self, name):
-        #cfg = get_ticket()
-        #lock_name = name
-        #return Lock(self.client, lock_name)
-        return SimpleLock(self, self.path('_lock/{}'.format(name)))
+        return SimpleLock(self,
+                          self.path('_lock/{}'.format(name)))
 
 class SimpleLock:
-    lock_keys = {}
+    lock_keys: Dict[str, str] = {}
 
     @classmethod
     async def close_all_keys(cls, client):
@@ -222,7 +224,7 @@ class SimpleLock:
                 return True
         return False
 
-    async def wait_key(self):
+    async def wait_key(self) -> None:
         while self.cont and not (await self.check_acquired()):
             try:
                 chg = await asyncio.wait_for(
@@ -242,7 +244,7 @@ class SimpleLock:
 
             #await asyncio.sleep(0.1)
 
-    async def keep_key(self):
+    async def keep_key(self) -> None:
         while self.cont and self.key:
             try:
                 await self.client.refresh(self.key, ttl=5)

@@ -1,3 +1,4 @@
+from typing import Dict, Any, List, Union, Iterable, Callable, Optional
 import os, sys
 import ssl
 import logging
@@ -26,9 +27,9 @@ collect_localbox = False
 
 bearer_token = None
 
-_http_clients = {}
+_http_clients: Dict[str, HttpClient] = {}
 
-async def get_box_metrics(connect):
+async def get_box_metrics(connect) -> Dict[str, Any]:
     if connect not in _http_clients:
         client = HttpClient(connect)
         _http_clients[connect] = client
@@ -36,6 +37,7 @@ async def get_box_metrics(connect):
         client = _http_clients[connect]
     try:
         url = urljoin(client.url_prefix, '/metrics.json')
+        assert client.session is not None
         resp = await client.session.get(url)
     except ClientConnectionError:
         logger.error('client connection error to %s', connect, exc_info=True)

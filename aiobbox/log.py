@@ -1,3 +1,4 @@
+from typing import Dict, Any, List, Union, Iterable, Callable, Optional
 import sys
 import os
 import logging
@@ -39,7 +40,7 @@ LOGGING = {
     },
 }
 
-def config_log():
+def config_log() -> None:
     from aiobbox import testing
     logging_config = LOGGING.copy()
 
@@ -59,6 +60,12 @@ def config_log():
         else:
             log_level = 'INFO'
 
-    logging_config['root']['level'] = log_level
-    logging_config['root']['handlers'] = handlers
+    root_cfg = logging_config['root']
+    assert isinstance(root_cfg, dict)
+
+    root_cfg['level'] = log_level
+    root_cfg['handlers'] = handlers
+
+    #logging_config['root']['level'] = log_level
+    #logging_config['root']['handlers'] = handlers
     logging.config.dictConfig(logging_config)

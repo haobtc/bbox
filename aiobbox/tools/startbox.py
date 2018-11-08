@@ -1,9 +1,10 @@
+from typing import Dict, Any, List, Union, Iterable, Set
 import os, sys
 import logging
 import uuid
 import json
 import asyncio
-import argparse
+from argparse import Namespace, ArgumentParser
 import aiobbox.server as bbox_server
 from aiobbox.cluster import get_box, get_cluster
 from aiobbox.cluster import get_ticket
@@ -12,9 +13,9 @@ from aiobbox.handler import BaseHandler
 
 class Handler(BaseHandler):
     help = 'start bbox python project'
-    run_forever = True
+    run_forever:bool = True
 
-    def add_arguments(self, parser):
+    def add_arguments(self, parser: ArgumentParser) -> None:
         parser.add_argument(
             'module',
             type=str,
@@ -39,9 +40,8 @@ class Handler(BaseHandler):
             default=3600 * 24,  # one day
             help='time to live')
 
-    async def run(self, args):
-        cfg = get_ticket()
-        if cfg.language != 'python3':
+    async def run(self, args: Namespace) -> None:
+        if get_ticket().language != 'python3':
             print('language must be python3', file=sys.stderr)
             sys.exit(1)
 
@@ -68,14 +68,14 @@ class Handler(BaseHandler):
 
         asyncio.ensure_future(self.wait_ttl(args.ttl))
 
-    async def wait_ttl(self, ttl):
+    async def wait_ttl(self, ttl:float) -> None:
         await asyncio.sleep(ttl)
         logging.info('box ttl expired, stoping')
         await get_box().deregister()
         logging.info('box ttl expired, stoped')
         sys.exit(0)
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         loop = asyncio.get_event_loop()
         for h in self.mod_handlers:
             h.shutdown()

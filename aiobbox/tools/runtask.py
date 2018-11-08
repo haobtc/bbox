@@ -1,3 +1,5 @@
+from typing import Dict, Any, List, Union, Iterable, Callable, Optional
+from argparse import Namespace, ArgumentParser
 import os, sys
 import signal
 import logging
@@ -15,7 +17,7 @@ logger = logging.getLogger('bbox')
 
 class Handler(BaseHandler):
     help = 'run bbox tasks'
-    def add_arguments(self, parser):
+    def add_arguments(self, parser: ArgumentParser) -> None:
         parser.add_argument(
             'module',
             type=str,
@@ -27,9 +29,9 @@ class Handler(BaseHandler):
             nargs='*',
             help='task arguments')
 
-    async def run(self, args):
-        cfg = get_ticket()
-        if cfg.language != 'python3':
+    async def run(self, args: Namespace) -> None:
+        ticket = get_ticket()
+        if ticket.language != 'python3':
             print('language must be python3', file=sys.stderr)
             sys.exit(1)
 
@@ -67,7 +69,7 @@ class Handler(BaseHandler):
             await asyncio.sleep(0.1)
             c.close()
 
-    def handle_stop_sig(self, handler):
+    def handle_stop_sig(self, handler: BaseHandler) -> None:
         try:
             logger.debug('sigint met, the handle %s should stop lately', handler)
             get_cluster().stop()
@@ -82,6 +84,6 @@ class Handler(BaseHandler):
             logger.error('error on handle sigint', exc_info=True)
             raise
 
-def sys_exit():
+def sys_exit() -> None:
     sys.exit(0)
 

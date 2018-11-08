@@ -1,3 +1,4 @@
+from typing import Dict, Any, List, Union, Iterable, Set
 import re, os
 import time
 import json
@@ -7,39 +8,47 @@ from aiobbox.utils import get_bbox_path, localbox_ip
 import aiobbox.testing as testing
 
 class Ticket:
-    def __init__(self):
-        self.data = {}
+    loaded: bool = False
+    name: str
+    prefix: str
+    bind_ip: str = '127.0.0.1'
+    language: str = 'python3'
+    etcd: List[str] = []
+    extbind: str = ''
+    port_range = List[int]
+    loadtime: int
 
-    def load(self):
+    def load(self) -> None:
         path = get_bbox_path('ticket.json')
         if path:
             with open(path, 'r', encoding='utf-8') as f:
+                self.loaded = True
                 kw = json.load(f)
-                self.update(**kw)
-                self.update(loadtime=int(time.time()))
+                self.name = kw['name']
+                prefix = kw['prefix']
+                if testing.test_mode:
+                    prefix = prefix + '_test'
+                self.prefix = prefix
+                self.bind_ip = kw.get('bind_ip', '127.0.0.1')
+                self.port_range = kw['port_range']
+                self.language = kw.get('language', 'python3')
+                self.etcd = kw['etcd']
+                self.extbind = kw.get('extbind', '')
+                self.loadtime = int(time.time())
 
-    def update(self, **kw):
-        if 'prefix' in kw and testing.test_mode:
-            kw['prefix'] = kw['prefix'] + '_test'
-        self.data.update(kw)
-        self.validate()
+                self.validate()
 
-    def validate(self):
+    def validate(self) -> None:
         assert re.match(r'[0-9a-zA-Z\_\.\-\+]+$', self.prefix)
         # TODO: add more roles
         assert localbox_ip(self.bind_ip) or self.bind_ip == '0.0.0.0'
 
-    def keys(self):
-        return self.data.keys()
+    # def keys(self) -> Iterable[str]:
+    #     return self.data.keys()
 
-    def __getitem__(self, key):
-        return self.data[key]
-
-    def __getattr__(self, key):
-        return self.data[key]
 
 _ticket = Ticket()
-def get_ticket():
-    if not _ticket.data:
+def get_ticket() -> Ticket:
+    if not _ticket.loaded:
         _ticket.load()
     return _ticket

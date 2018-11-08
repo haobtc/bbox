@@ -8,7 +8,6 @@ from aiobbox.server import Service
 from aiobbox.cluster import get_cluster
 from aiobbox.exceptions import ServiceError
 from aiobbox.cluster import get_sharedconfig
-from aiobbox.utils import parse_int
 
 srv = Service()
 srv.__doc__ = '''

@@ -1,14 +1,15 @@
+from typing import Dict, Any, List, Union, Iterable, Set
 import os, sys
 import re
 import json
 import asyncio
-import argparse
+from argparse import Namespace, ArgumentParser
 import aiobbox.client as bbox_client
 from aiobbox.cluster import get_cluster, get_sharedconfig
 from aiobbox.utils import guess_json, json_pp, semanticbool
 from aiobbox.handler import BaseHandler
 
-async def get_config(args):
+async def get_config(args: Namespace) -> None:
     sec_key = args.sec_key
     if '/' in sec_key:
         sec, key = sec_key.split('/')
@@ -17,12 +18,12 @@ async def get_config(args):
         r = get_sharedconfig().get_section_strict(sec_key)
     print(json_pp(r))
 
-async def set_config(args):
+async def set_config(args: Namespace) -> None:
     sec, key = args.sec_key.split('/')
     value = guess_json(args.value)
     return await get_cluster().set_config(sec, key, value)
 
-async def del_config(args):
+async def del_config(args: Namespace) -> None:
     sec_key = args.sec_key
     if '/' in sec_key:
         sec, key = sec_key.split('/')
@@ -30,14 +31,14 @@ async def del_config(args):
     else:
         return await get_cluster().del_section(sec_key)
 
-async def clear_config(args):
+async def clear_config(args: Namespace) -> None:
     return await get_cluster().clear_config()
 
-async def dump_config(args):
+async def dump_config(args: Namespace) -> None:
     data = get_sharedconfig().dump_json()
     print(data)
 
-async def load_config(args):
+async def load_config(args: Namespace) -> None:
     jsonfile = args.jsonfile
     with open(jsonfile, 'r', encoding='utf-8') as f:
         new_sections = json.load(f)
@@ -54,8 +55,8 @@ async def load_config(args):
         await get_cluster().set_config(sec, key, value)
 
 class Handler(BaseHandler):
-    help = 'bbox config'
-    def add_arguments(self, parser):
+    help: str = 'bbox config'
+    def add_arguments(self, parser: ArgumentParser) -> None:
         subp = parser.add_subparsers()
         p = subp.add_parser('get', help='get config')
         p.add_argument(
@@ -104,7 +105,7 @@ class Handler(BaseHandler):
             help='sec/key or sec')
         p.set_defaults(func=del_config)
 
-    async def run(self, args):
+    async def run(self, args: Namespace) -> None:
         await get_cluster().start()
         func = getattr(args, 'func', None)
         if func:

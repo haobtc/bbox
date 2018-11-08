@@ -1,3 +1,4 @@
+from typing import Dict, Any, List, Union, Iterable, Set, Optional
 import re
 import weakref
 import logging
@@ -14,21 +15,22 @@ from json import (
 import netifaces
 import random
 from datetime import datetime, date
+from .exceptions import ServiceError
 
-def guess_json(p):
+def guess_json(p:str) -> Any:
     if p in ('null', 'true', 'false'):
-        p = json_loads(p)
+        return json_loads(p)
     elif p.startswith('{') or p.startswith('['):
-        p = json_loads(p)
+        return json_loads(p)
     elif p.startswith('"'):
-        p = json_loads(p)
+        return json_loads(p)
     elif p.isdigit() or re.match(r'\-?\d+$', p):
-        p = int(p)
+        return int(p)
     elif re.match(r'\-?\d*(\.\d+)?$', p):
-        p = float(p)
+        return float(p)
     return p
 
-def semanticbool(v):
+def semanticbool(v:str) -> bool:
     if v.lower() in ('yes', 'true', 'ok', 'on', '1', 'y'):
         return True
     elif v.lower() in ('no', 'false', 'off', '0', 'n'):
@@ -37,56 +39,49 @@ def semanticbool(v):
         raise ValueError()
 
 class BBoxJSONEncoder(JSONEncoder):
-    def default(self, obj):
+    def default(self, obj: Any) -> str:
         if isinstance(obj, datetime):
             return obj.replace(microsecond=0).isoformat()
         elif isinstance(obj, (Decimal, date)):
             return str(obj)
         return JSONEncoder.default(self, obj)
 
-def json_pp(v):
+def json_pp(v: Any) -> str:
     return json_dumps(v, indent=2, sort_keys=True, cls=BBoxJSONEncoder)
 
-def json_to_str(v):
+def json_to_str(v: Any) -> str:
     return json_dumps(v, sort_keys=True, cls=BBoxJSONEncoder)
 
-def map_bytes_to_str(alist, encoding='utf-8'):
+def map_bytes_to_str(alist: List[bytes], encoding:str='utf-8') -> List[str]:
     return [v.decode(encoding) for v in alist]
 
-def import_module(spec):
+def import_module(spec: str) -> Any:
     mod = __import__(spec)
     for sec in spec.split('.')[1:]:
         mod = getattr(mod, sec)
     return mod
 
-def parse_int(v):
-    assert isinstance(v, int)
-    return v
+def assert_type(v:Any, t:Any) -> None:
+    if not isinstance(v, t):
+        raise TypeError()
 
-def parse_float(v):
-    assert isinstance(v, (int, float, long))
-    return v
-
-def parse_str(v):
-    assert isinstance(v, str)
-
-def assert_type(v, t):
-    assert isinstance(v, t)
-
-def abs_path(path):
+def abs_path(path: str) -> str:
     return os.path.join(os.getcwd(), path)
 
-def home_path(path):
-    return os.path.join(os.getenv('HOME'), path)
+def home_path(path: str) -> str:
+    home:Optional[str] = os.getenv('HOME')
+    assert home is not None
+    return os.path.join(home, path)
 
-def force_str(v, encoding='utf-8'):
+def force_str(v: Any, encoding:str='utf-8') -> str:
     if type(v) == bytes:
         return v.decode(encoding)
     else:
         return str(v)
 
-_localbox_ipset = None
-def get_localbox_ipset():
+_localbox_ipset: Optional[Set[str]] = None
+
+def get_localbox_ipset() -> Set[str]:
     global _localbox_ipset
     if _localbox_ipset is not None:
         return _localbox_ipset
@@ -101,20 +96,22 @@ def get_localbox_ipset():
                     _localbox_ipset.add(addr)
     return _localbox_ipset
 
-def localbox_ip(*iplist):
+def localbox_ip(*iplist:str) -> Set[str]:
     return get_localbox_ipset().intersection(set(iplist))
 
 
-def get_bbox_path(path):
+def get_bbox_path(path:str) -> Optional[str]:
     rel_path = '.bbox/{}'.format(path)
-    for path in [
+    p:str
+    for p in [
             abs_path(rel_path),
             home_path(rel_path),
             os.path.join('/etc/bbox', path)]:
-        if os.path.exists(path):
-            return path
+        if os.path.exists(p):
+            return p
+    return None
 
-def get_ssl_context(ssl_prefix):
+def get_ssl_context(ssl_prefix:str) -> Optional[ssl.SSLContext]:
     if ssl_prefix:
         ssl_cert = get_bbox_path(
             'certs/{}/{}.crt'.format(ssl_prefix, ssl_prefix))
@@ -129,8 +126,10 @@ def get_ssl_context(ssl_prefix):
         ssl_context.load_cert_chain(
             ssl_cert, ssl_key)
         return ssl_context
+    else:
+        return None
 
-def get_cert_ssl_context(ssl_prefix):
+def get_cert_ssl_context(ssl_prefix: str) -> Optional[ssl.SSLContext]:
     if ssl_prefix:
         ssl_cert = get_bbox_path(
             'certs/{}/{}.crt'.format(ssl_prefix, ssl_prefix))
@@ -139,22 +138,24 @@ def get_cert_ssl_context(ssl_prefix):
             purpose=ssl.Purpose.CLIENT_AUTH,
             cafile=ssl_cert)
         return ssl_context
+    else:
+        return None
 
-g_request_id = 0
-def next_request_id():
+g_request_id: int = 0
+def next_request_id() -> int:
     global g_request_id
     g_request_id += 1
     return g_request_id
 
 
 # sleep tasks
-g_sleep_tasks = weakref.WeakSet()
-async def sleep(secs):
+g_sleep_tasks:weakref.WeakSet = weakref.WeakSet()
+async def sleep(secs: float) -> Any:
     '''
     Interruptable sleep task
     '''
     loop = asyncio.get_event_loop()
-    task = loop.create_task(asyncio.sleep(secs))
+    task:asyncio.Task = loop.create_task(asyncio.sleep(secs))
     g_sleep_tasks.add(task)
     try:
         return await task
@@ -167,6 +168,6 @@ async def sleep(secs):
             # in case task is not in sleep_tasks
             logging.warn('sleep task %s is not in list', task)
 
-def wakeup_sleep_tasks():
+def wakeup_sleep_tasks() -> None:
     for task in g_sleep_tasks:
         task.cancel()

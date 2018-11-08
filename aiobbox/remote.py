@@ -11,10 +11,10 @@ from aiobbox.utils import next_request_id
 
 logger = logging.getLogger('bboxremote')
 
-try:
-    import selectors
-except ImportError:
-    from asyncio import selectors
+#try:
+#    import selectors
+#except ImportError:
+#    from asyncio import selectors
 
 class HttpClient:
     def __init__(self, url_prefix):

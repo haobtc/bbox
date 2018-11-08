@@ -1,3 +1,4 @@
+from typing import Dict, Any, List, Union, Iterable, Callable, Optional
 import re
 import time
 import logging
@@ -15,36 +16,39 @@ from aiobbox.metrics import collect_metrics
 from aiobbox import stats
 
 DEBUG = True
-srv_dict = {}
-
 logger = logging.getLogger('bbox')
 
-def has_service(srv):
+Method = Callable[..., Any]
+
+srv_dict:Dict[str, 'Service'] = {}
+
+def has_service(srv: str) -> bool:
     return srv in srv_dict
 
-def srv_names(self):
+def srv_names(self) -> List[str]:
     return list(srv_dict.keys())
 
+
 class MethodRef:
-    def __init__(self, fn, **kw):
+    def __init__(self, fn:Method, **kw:Any) -> None:
         self.fn = fn
 
-    def get_doc(self):
+    def get_doc(self) -> str:
         return self.fn.__doc__ or ''
 
 class Service(object):
-    def __init__(self):
-        self.methods = {}
-        self.srv_name = None
+    def __init__(self) -> None:
+        self.methods: Dict[str, MethodRef] = {}
+        self.srv_name: Optional[str] = None
 
-    def register(self, srv_name):
+    def register(self, srv_name: str) -> None:
         self.srv_name = srv_name
         if srv_name in srv_dict:
             logger.warn('srv {} already exist'.format(srv_name))
         srv_dict[srv_name] = self
 
-    def method(self, name, for_test=False):
-        def decorator(fn):
+    def method(self, name: str, for_test: bool=False) -> Method:
+        def decorator(fn: Method) -> Method:
             if for_test and not testing.test_mode:
                 # this method cannot be added
                 # for non testing env
@@ -56,7 +60,7 @@ class Service(object):
             return __w
         return decorator
 
-    def get_docs(self, srv_name):
+    def get_docs(self, srv_name: str) -> Dict[str, Any]:
         arr = []
         for name, mref in sorted(self.methods.items()):
             doc = mref.get_doc()
@@ -68,27 +72,24 @@ class Service(object):
             'name': srv_name,
             'doc': self.__doc__,
             'methods': arr
-            }
+        }
 
 class ServiceRequest:
-    srv = None
-    req = None
+    srv: Optional['Service'] = None
+    req: Request
 
     @classmethod
-    def from_req(cls, req):
-        assert isinstance(req, Request)
-        sreq = cls()
-        sreq.req = req
-        return sreq
+    def from_body(cls, body:Dict[str, Any]) -> 'ServiceRequest':
+        req = Request(body)
+        return cls(req)
 
-    def __init__(self, body=None):
-        self.body = body
+    def __init__(self, req):
+        self.req = req
 
-    async def handle(self):
+    async def handle(self) -> Dict[str, Any]:
         stats_name = None
         try:
-            if self.req is None:
-                self.req = Request(self.body)
+            srv_name: str = self.req.srv_name
             self.srv = srv_dict.get(self.req.srv_name)
             if not self.srv:
                 raise ServiceError(
@@ -164,46 +165,31 @@ class ServiceRequest:
                     'jsonrpc': '2.0'}
         return resp
 
-    async def call_method(self, method_ref, srv_name):
-            start_time = time.time()
-            stats_name = '/{}/{}'.format(
-                srv_name, self.req.method)
-            stats.rpc_request_count.incr(stats_name)
-            res = await method_ref.fn(self, *self.req.params)
-            resp = {'result': res,
-                    'id': self.req.req_id,
-                    'jsonrpc': '2.0'}
-            end_time = time.time()
-            if end_time - start_time > 1.0:
-                logging.warn(
-                    'long bbox method execution, '
-                    'method %s, box %s, used %s seconds',
-                    self.req.full_method,
-                    get_box().boxid,
-                    end_time - start_time)
-                stats.slow_rpc_request_count.incr(stats_name)
-            return resp
-
-    async def handle_ws(self, ws):
-        resp = await self.handle()
-        if resp:
-            await ws.send_json(resp)
+    async def call_method(self, method_ref: MethodRef, srv_name:str) -> Dict[str, Any]:
+        start_time = time.time()
+        stats_name = '/{}/{}'.format(
+            srv_name, self.req.method)
+        stats.rpc_request_count.incr(stats_name)
+        res: Any = await method_ref.fn(self, *self.req.params)
+        resp: Dict[str, Any] = {'result': res,
+                                'id': self.req.req_id,
+                                'jsonrpc': '2.0'}
+        end_time = time.time()
+        if end_time - start_time > 1.0:
+            logging.warn(
+                'long bbox method execution, '
+                'method %s, box %s, used %s seconds',
+                self.req.full_method,
+                get_box().boxid,
+                end_time - start_time)
+            stats.slow_rpc_request_count.incr(stats_name)
         return resp
 
 async def handle(request):
     body = await request.json()
-    sreq = ServiceRequest(body)
+    sreq = ServiceRequest.from_body(body)
     resp = await sreq.handle()
     return web.json_response(resp)
-
-async def handle_ws(request):
-    ws = web.WebSocketResponse(autoping=True)
-    await ws.prepare(request)
-
-    async for req_msg in ws:
-        body = json.loads(req_msg.data)
-        req = ServiceRequest(body)
-        asyncio.ensure_future(req.handle_ws(ws))
 
 async def index(request):
     return web.Response(text='hello')
@@ -247,7 +233,7 @@ async def start_server(args):
 
     app = web.Application()
     app.router.add_post('/jsonrpc/2.0/api', handle)
-    app.router.add_route('*', '/jsonrpc/2.0/ws', handle_ws)
+    #app.router.add_route('*', '/jsonrpc/2.0/ws', handle_ws)
     app.router.add_get('/metrics', handle_metrics)
     app.router.add_get('/metrics.json', handle_metrics_json)
     app.router.add_get('/', index)

@@ -1,3 +1,4 @@
+from typing import Dict, Any, List, Union, Iterable, Set
 import logging
 import re
 import random
@@ -15,13 +16,15 @@ from .cfg import SharedConfig, get_sharedconfig
 logger = logging.getLogger('bbox')
 
 class ClientAgent(EtcdClient):
-    def __init__(self):
+    state: str = 'INIT'
+
+    def __init__(self) -> None:
         super(ClientAgent, self).__init__()
         self.state = 'INIT'
 
-    async def start(self):
-        self.route = defaultdict(list)
-        self.boxes = {}
+    async def start(self) -> None:
+        self.route: Dict[str, List[str]] = defaultdict(list)
+        self.boxes: Dict[str, Any] = {}
 
         self.connect()
 
@@ -32,23 +35,23 @@ class ClientAgent(EtcdClient):
         asyncio.ensure_future(self._watch_configs())
         self.state = 'STARTED'
 
-    def stop(self):
+    def stop(self) -> None:
         self.state = 'STOPPING'
 
-    def is_started(self):
+    def is_started(self) -> bool:
         return self.state == 'STARTED'
     is_running = is_started
 
-    def is_stopping(self):
+    def is_stopping(self) -> bool:
         return self.state == 'STOPPING'
 
-    def get_local_boxes(self):
+    def get_local_boxes(self) -> Iterable[str]:
         for bind in self.boxes.keys():
             if localbox_ip(bind.split(':')[0]):
                 yield bind
 
-    async def get_boxes(self, chg=None):
-        new_route = defaultdict(list)
+    async def get_boxes(self, _chg:Any=None):
+        new_route: Dict[str, List[str]] = defaultdict(list)
         boxes = {}
         try:
             r = await self.read(self.path('boxes'),
@@ -81,7 +84,7 @@ class ClientAgent(EtcdClient):
             self.get_boxes)
 
     # config related
-    async def set_config(self, sec, key, value):
+    async def set_config(self, sec, key, value) -> None:
         assert sec and key
         assert '/' not in sec
         assert '/' not in key
@@ -99,7 +102,7 @@ class ClientAgent(EtcdClient):
                              prevExist=False)
         shared_cfg.set(sec, key, value)
 
-    async def del_config(self, sec, key):
+    async def del_config(self, sec:str, key:str) -> None:
         assert sec and key
         assert '/' not in sec
         assert '/' not in key
@@ -108,7 +111,7 @@ class ClientAgent(EtcdClient):
         etcd_key = self.path('configs/{}/{}'.format(sec, key))
         await self.delete(etcd_key)
 
-    async def del_section(self, sec):
+    async def del_section(self, sec: str) -> None:
         assert sec
         assert '/' not in sec
 
@@ -116,7 +119,7 @@ class ClientAgent(EtcdClient):
         etcd_key = self.path('configs/{}'.format(sec))
         await self.delete(etcd_key, recursive=True)
 
-    async def clear_config(self):
+    async def clear_config(self) -> None:
         get_sharedconfig().clear()
         etcd_key = self.path('configs')
         try:
@@ -125,7 +128,7 @@ class ClientAgent(EtcdClient):
             logger.debug(
                 'key %s not found on delete', etcd_key)
 
-    async def get_configs(self, chg=None):
+    async def get_configs(self, _chg:Any=None) -> None:
         reg = r'/(?P<prefix>[^/]+)/configs/(?P<sec>[^/]+)/(?P<key>[^/]+)'
         try:
             r = await self.read(self.path('configs'),

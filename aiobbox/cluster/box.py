@@ -1,3 +1,4 @@
+from typing import Dict, Any, List, Union, Iterable, Set, Optional
 import logging
 import re
 import random
@@ -18,24 +19,28 @@ logger = logging.getLogger('bbox')
 BOX_TTL = 10
 
 class BoxAgent(EtcdClient):
-    def __init__(self):
-        super(BoxAgent, self).__init__()
-        self.ssl_prefix = None
-        self.started = False
+    srv_names: List[str]
+    bind: str = ''
+    extbind: str = ''
 
-    async def start(self, boxid, srv_names):
+    def __init__(self) -> None:
+        super(BoxAgent, self).__init__()
+        self.ssl_prefix: Optional[str] = None
+        self.started: bool = False
+
+    async def start(self, boxid: str, srv_names: List[str]) -> None:
         assert not self.started
         assert boxid
 
         self.boxid = boxid
         self.srv_names = srv_names
-        self.bind = None
-        self.extbind = None
+        self.bind = ''
+        self.extbind = ''
         self.connect()
         await self.register()
         self.started = True
 
-    def box_info(self, extbind=None):
+    def box_info(self, extbind: str=None) -> str:
         extbind = extbind or self.extbind
         return json_to_str({
             'bind': extbind,
@@ -44,7 +49,7 @@ class BoxAgent(EtcdClient):
             'boxid': self.boxid,
             'services': self.srv_names})
 
-    def get_box_config(self, key, default=None):
+    def get_box_config(self, key: str, default:Any=None) -> Any:
         config = get_sharedconfig()
         return config.get_chain(
             ['box.{}'.format(self.boxid),
@@ -52,22 +57,22 @@ class BoxAgent(EtcdClient):
             key,
             default=default)
 
-    async def register(self, retry=100):
-        cfg = get_ticket()
+    async def register(self, retry:int=100) -> None:
+        ticket = get_ticket()
         for _ in range(retry + 1):
             if self.bind:
                 return
 
             port_range = self.get_box_config(
                 'port_range',
-                default=cfg.port_range)
+                default=ticket.port_range)
 
             assert port_range[0] < port_range[1]
             port = random.randrange(*port_range)
 
-            extbind = cfg.extbind
+            extbind = ticket.extbind
             if not extbind:
-                extbind = '{}:{}'.format(cfg.bind_ip, port)
+                extbind = '{}:{}'.format(ticket.bind_ip, port)
 
             key = self.path('boxes/{}'.format(extbind))
             value = self.box_info(extbind=extbind)
@@ -76,7 +81,7 @@ class BoxAgent(EtcdClient):
                                  ttl=BOX_TTL,
                                  prevExist=False)
                 self.extbind = extbind
-                self.bind = '{}:{}'.format(cfg.bind_ip, port)
+                self.bind = '{}:{}'.format(ticket.bind_ip, port)
                 asyncio.ensure_future(self.update())
                 return
             except ETCDError:
@@ -89,7 +94,7 @@ class BoxAgent(EtcdClient):
         raise RegisterFailed(
             'no port alloced after retry {} times'.format(retry))
 
-    async def deregister(self):
+    async def deregister(self) -> None:
         self.cont = False
         if not self.bind or not self.client:
             return
@@ -100,7 +105,7 @@ class BoxAgent(EtcdClient):
             pass
         logging.debug('box %s deregistered from cluster', self.boxid)
 
-    async def update(self):
+    async def update(self) -> None:
         while self.cont:
             await asyncio.sleep(3)
             if not self.cont:
@@ -122,5 +127,5 @@ class BoxAgent(EtcdClient):
                     logger.warn('etcd error on refresh')
 
 _agent = BoxAgent()
-def get_box():
+def get_box() -> BoxAgent:
     return _agent

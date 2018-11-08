@@ -1,27 +1,24 @@
+from typing import Dict, Any, List, Tuple, Union, Iterable, Optional
 from collections import defaultdict
-from aiobbox.metrics import add_metrics
+from aiobbox.metrics import add_metrics, IMetricsEntry, MEntry
 
-class RPCRequestCount:
-    name = None
-    help = None
-    type = 'gauge'
-
-    def __init__(self, name, help=''):
+class RPCRequestCount(IMetricsEntry):
+    def __init__(self, name:str, help:str=''):
         self.name = name
         if not help:
             self.help = self.name.replace('_', ' ')
         else:
             self.help = help
-        self.values = defaultdict(int)
+        self.values: Dict[str, float] = defaultdict(float)
 
-    def incr(self, endpoint, v=1):
+    def incr(self, endpoint:str, v:float=1) -> None:
         self.values[endpoint] += v
 
-    def setv(self, endpoint, v):
+    def setv(self, endpoint:str, v:float):
         self.values[endpoint] = v
 
-    async def collect(self):
-        arr = [({'endpoint': k}, v)
+    async def collect(self) -> List[MEntry]:
+        arr:List[MEntry] = [({'endpoint': k}, v)
                for k, v in self.values.items()]
         # clear old value
         self.values = defaultdict(int)

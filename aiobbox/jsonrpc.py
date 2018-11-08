@@ -1,3 +1,4 @@
+from typing import Dict, Any, List, Tuple, Union, Iterable, Optional
 import re
 from aiobbox.exceptions import DataError
 
@@ -5,14 +6,17 @@ def parse_method(method):
     return re.match(
         r'(?P<srv>\w[\.\w]*)::(?P<method>\w+)$', method)
 
+#ParamsType = Optional[Union[List[Any], Tuple[Any, ...]]]
+ParamsType = Union[List[Any], Tuple[Any, ...]]
+
 class Request:
-    req_id = None
-    params = None
-    srv_name = None
-    method = None
+    req_id: Any = None
+    params: ParamsType
+    srv_name: str
+    method: str
 
     @classmethod
-    def make(cls, req_id, srv_name, method, *params):
+    def make(cls, req_id: Any, srv_name: str, method: str, *params) -> 'Request':
         assert req_id is not None
         full_method = srv_name + '::' + method
         return cls({
@@ -22,21 +26,22 @@ class Request:
             'params': params
         })
 
-    def __init__(self, body):
+    def __init__(self, body: Dict[str, Any]) -> None:
         self.body = body
         self._parse_body(body)
 
-    def clone(self):
+    def clone(self) -> Any:
         return Request(self.as_json())
 
-    def is_notify(self):
+    def is_notify(self) -> bool:
         return self.req_id is None
 
     @property
-    def full_method(self):
-        return self.srv_name + '::' + self.method
+    def full_method(self) -> str:
+        return '{}::{}'.format(self.srv_name,
+                               self.method)
 
-    def as_json(self):
+    def as_json(self) -> Dict[str, Any]:
         data = {
             'jsonrpc': '2.0',
             'method': self.full_method,
@@ -46,7 +51,7 @@ class Request:
             data['id'] = self.req_id
         return data
 
-    def _parse_body(self, body):
+    def _parse_body(self, body: Dict[str, Any]) -> None:
         self.req_id = body.get('id')
         if not (self.req_id is None or
                 isinstance(self.req_id, (str, int))):
@@ -54,7 +59,7 @@ class Request:
 
         # parse params
         params = body.get('params', [])
-        if not isinstance(params, (list, tuple, dict)):
+        if not isinstance(params, (list, tuple)):
             raise DataError('invalid params')
         self.params = params
 
@@ -69,35 +74,35 @@ class Request:
         self.srv_name = m.group('srv')
         self.method = m.group('method')
 
-    def error_response(self, error):
+    def error_response(self, error: Any) -> 'Response':
         assert error is not None
         return Response({
             'id': self.req_id,
             'error': error
             })
 
-    def result(self, result):
+    def result(self, result: Any) -> 'Response':
         return Response({
             'id': self.req_id,
             'result': result
         })
 
-    def allowed(self, whitelist):
+    def allowed(self, whitelist: Optional[List[str]]) -> bool:
         if not whitelist:
             return True
         return (self.full_method in whitelist or
                 self.srv_name in whitelist)
 
 class Response:
-    error = None
-    result = None
-    req_id = None
+    error: Any = None
+    result: Any = None
+    req_id: Any = None
 
-    def __init__(self, body):
+    def __init__(self, body: Dict[str, Any]) -> None:
         self.body = body
         self._parse_body(body)
 
-    def _parse_body(self, body):
+    def _parse_body(self, body: Dict[str, Any]) -> None:
         self.error = body.get('error')
         self.result = body.get('result')
         self.req_id = body.get('id')
@@ -107,7 +112,7 @@ class Response:
         if not isinstance(self.req_id, (str, int)):
             raise DataError('invalid req_id')
 
-    def as_json(self):
+    def as_json(self) -> Dict[str, Any]:
         data = {
             'jsonrpc': '2.0',
             'id': self.req_id,

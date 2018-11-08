@@ -1,3 +1,4 @@
+from typing import Dict, Any, List, Union, Iterable, Optional
 import logging
 import time
 import sys, os
@@ -18,13 +19,10 @@ logger = logging.getLogger('bbox')
 
 DEFAULT_TIMEOUT_SECS = 10
 
-try:
-    import selectors
-except ImportError:
-    from asyncio import selectors
-
 class HttpClient:
-    def __init__(self, connect, expect='text'):
+    session: Optional[aiohttp.ClientSession]
+
+    def __init__(self, connect: str, expect: str='text') -> None:
         self.expect = expect
         c = get_cluster()
         box = c.boxes[connect]
@@ -37,7 +35,7 @@ class HttpClient:
         conn = aiohttp.TCPConnector(ssl_context=ssl_context)
         self.session = aiohttp.ClientSession(connector=conn)
 
-    async def request(self, srv, method, *params, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
+    async def request(self, srv: str, method: str, *params: Any, req_id:Any=None, timeout: float=DEFAULT_TIMEOUT_SECS) -> Any:
         '''
         self.request() is an outdated method, use self.request_obj instead
         '''
@@ -46,7 +44,7 @@ class HttpClient:
         req = Request.make(req_id, srv, method, *params)
         return await self.request_obj(req, timeout=timeout)
 
-    async def request_obj(self, req, timeout=DEFAULT_TIMEOUT_SECS):
+    async def request_obj(self, req: Request, timeout:float =DEFAULT_TIMEOUT_SECS) -> Any:
         url = urljoin(self.url_prefix,
                       '/jsonrpc/2.0/api')
         payload = req.as_json()
@@ -55,6 +53,7 @@ class HttpClient:
         try:
             for i in range(2):
                 try:
+                    assert self.session is not None
                     async with self.session.post(
                             url,
                             headers=headers,
@@ -77,39 +76,43 @@ class HttpClient:
                     'url %s, payload %s, used %s seconds',
                     url, payload, used_time)
 
-    def __del__(self):
+    def __del__(self) -> None:
         self.session = None
 
+class ServiceRef:
+    def __init__(self, srv_name: str, pool: 'ServicePool') -> None:
+        self.name:str = srv_name
+        self.pool:ServicePool = pool
+
+    def __getattr__(self, name: str) -> Any:
+        return MethodRef(name, self)
+
 class MethodRef:
-    def __init__(self, name, srv_ref):
+    def __init__(self, name: str, srv_ref: ServiceRef) -> None:
         self.name = name
         self.srv_ref = srv_ref
 
-    async def __call__(self, *params, **kw):
+    async def __call__(self, *params:Any, **kw:Any) -> Any:
         return await self.srv_ref.pool.request(
             self.srv_ref.name,
             self.name,
             *params,
             **kw)
 
-class ServiceRef:
-    def __init__(self, srv_name, pool):
-        self.name = srv_name
-        self.pool = pool
+class ServicePool:
+    async def request(self, srv_name: str, method: str, *params:Any, boxid: str=None, retry: int=0, req_id: Any=None, timeout: float=DEFAULT_TIMEOUT_SECS):
+        raise NotImplementedError
 
-    def __getattr__(self, name):
-        return MethodRef(name, self)
-
-class SimpleHttpPool:
+class SimpleHttpPool(ServicePool):
     ''' short term HTTP request '''
     FIRST = 1
     RANDOM = 2
 
-    def __init__(self):
-        self.pool = {}
-        self.policy = self.RANDOM
+    def __init__(self) -> None:
+        self.pool: Dict[str, ServiceRef] = {}
+        self.policy: int = self.RANDOM
 
-    def get_client(self, srv_name, policy=None, boxid=None):
+    def get_client(self, srv_name: str, policy: int=None, boxid: str=None):
         policy = policy or self.policy
         connects = []
         cc = get_cluster()
@@ -129,23 +132,24 @@ class SimpleHttpPool:
             connect = random.choice(connects)
             return HttpClient(connect, expect='json')
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> ServiceRef:
         return ServiceRef(name, self)
 
-    def __getitem__(self, name):
+    def __getitem__(self, name: str) -> ServiceRef:
         return ServiceRef(name, self)
 
-    async def request(self, srv_name, method, *params, boxid=None, retry=0, req_id=None, timeout=DEFAULT_TIMEOUT_SECS):
+    async def request(self, srv_name: str, method: str, *params:Any, boxid: str=None, retry: int=0, req_id: Any=None, timeout: float=DEFAULT_TIMEOUT_SECS):
         if not req_id:
             req_id = next_request_id()
         req = Request.make(req_id, srv_name, method, *params)
         return await self.request_obj(req, timeout=timeout, retry=retry)
 
-    async def request_obj(self, req, timeout=DEFAULT_TIMEOUT_SECS, retry=0):
+    async def request_obj(self, req, timeout=DEFAULT_TIMEOUT_SECS, retry=0) -> Any:
         if has_service(req.srv_name):
             # if local has srv_name,
             # call it by default to avoid network failure
-            sreq = ServiceRequest.from_req(req)
+            #sreq = ServiceRequest.from_req(req)
+            sreq = ServiceRequest(req)
             return await sreq.handle()
 
         for rty in range(retry + 1):
@@ -159,7 +163,7 @@ class SimpleHttpPool:
         raise ConnectionError(
             'cannot retry connections')
 
-    async def _request_obj(self, req, boxid=None, timeout=DEFAULT_TIMEOUT_SECS):
+    async def _request_obj(self, req, boxid=None, timeout=DEFAULT_TIMEOUT_SECS) -> Any:
         client = self.get_client(req.srv_name, boxid=boxid)
         if not client:
             raise NoServiceFound('no service found {}'.format(req.srv_name))
