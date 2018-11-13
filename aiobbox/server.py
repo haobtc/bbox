@@ -75,11 +75,13 @@ class ServiceRequest:
     req = None
 
     @classmethod
-    def from_req(self, req):
+    def from_req(cls, req):
         assert isinstance(req, Request)
-        self.req = req
+        sreq = cls()
+        sreq.req = req
+        return sreq
 
-    def __init__(self, body):
+    def __init__(self, body=None):
         self.body = body
 
     async def handle(self):
