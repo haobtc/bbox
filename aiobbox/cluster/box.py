@@ -72,7 +72,11 @@ class BoxAgent(EtcdClient):
 
             extbind = ticket.extbind
             if not extbind:
+                # combine external bind info
                 extbind = '{}:{}'.format(ticket.bind_ip, port)
+            elif ':' not in extbind:
+                # use random selected port if not specified
+                extbind = '{}:{}'.format(extbind, port)
 
             key = self.path('boxes/{}'.format(extbind))
             value = self.box_info(extbind=extbind)
