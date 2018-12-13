@@ -1,10 +1,10 @@
 from typing import Dict, Any, List, Union, Iterable, Set, Optional
 import logging
 import re
-import random
 import json
 import time
 import asyncio
+from hashlib import md5
 from datetime import datetime
 from dateutil.tz import tzlocal
 import aio_etcd as etcd
@@ -59,7 +59,7 @@ class BoxAgent(EtcdClient):
 
     async def register(self, retry:int=100) -> None:
         ticket = get_ticket()
-        for _ in range(retry + 1):
+        for retry_t in range(retry + 1):
             if self.bind:
                 return
 
@@ -67,8 +67,17 @@ class BoxAgent(EtcdClient):
                 'port_range',
                 default=ticket.port_range)
 
-            assert port_range[0] < port_range[1]
-            port = random.randrange(*port_range)
+            assert len(port_range) == 2
+            assert port_range[0] < port_range[1], 'invalid port range {}'.format(port_range)
+
+            port_range = range(*port_range)
+
+            # choose a relatively fixed port to keep serve
+            digest = int(md5('{}.{}'.format(self.boxid, retry_t).encode()).hexdigest(), 16)
+            port_index = digest % len(port_range)
+            port = port_range[port_index]
+            assert port >= port_range[0], 'port {} is too small'.format(port)
+            assert port <= port_range[-1], 'port {} is too big'.format(port)
 
             extbind = ticket.extbind
             if not extbind:
