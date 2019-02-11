@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Union, Iterable, Set, Optional
+from typing import Dict, Any, List, Union, Iterable, Set, Optional, Awaitable, Callable, Tuple
 import re
 import weakref
 import logging
@@ -171,3 +171,19 @@ async def sleep(secs: float) -> Any:
 def wakeup_sleep_tasks() -> None:
     for task in g_sleep_tasks:
         task.cancel()
+
+def supervised_run(cor: Callable, args:Tuple=(), kwargs:Optional[Dict[str, Any]]=None, exc:Any=None, restart_sleep:float=0.01) -> None:
+    from .cluster import get_cluster
+    if kwargs is None:
+        kwargs = {}
+    async def __wrapped() -> None:
+        while get_cluster().is_running():
+            try:
+                await cor(*args, **kwargs)
+            except Exception as e:
+                if exc and isinstance(e, exc):
+                    logging.warn('except on supervised_run, will restart', exc_info=True)
+                    await sleep(restart_sleep)
+                else:
+                    raise
+    asyncio.ensure_future(__wrapped())
