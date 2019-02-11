@@ -57,6 +57,8 @@ class Handler(BaseHandler):
             self.handle_stop_sig,
             handlers)
 
+        loop.set_exception_handler(coroutine_exc_handler)
+
         try:
             await get_cluster().start()
             await asyncio.gather(*cors)
@@ -93,3 +95,9 @@ class Handler(BaseHandler):
 def sys_exit():
     sys.exit(0)
 
+def coroutine_exc_handler(loop, context):
+    loop.default_exception_handler(context)
+    exc = context.get('exception')
+    logger.error('coroutine exception %s context %s', exc, context)
+    if exc and os.getenv('BBOX_COR_EXIT', '').lower() in ('1', 'yes', 'ok', 'true'):
+        loop.stop()

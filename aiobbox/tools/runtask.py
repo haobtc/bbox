@@ -54,6 +54,8 @@ class Handler(BaseHandler):
             self.handle_stop_sig,
             handler)
 
+        loop.set_exception_handler(coroutine_exc_handler)
+
         parser = argparse.ArgumentParser(prog='bbox.py run')
         handler.add_arguments(parser)
         sub_args = parser.parse_args(args.task_params)
@@ -87,3 +89,9 @@ class Handler(BaseHandler):
 def sys_exit() -> None:
     sys.exit(0)
 
+def coroutine_exc_handler(loop, context):
+    loop.default_exception_handler(context)
+    exc = context.get('exception')
+    logger.error('coroutine exception %s context %s', exc, context)
+    if exc and os.getenv('BBOX_COR_EXIT', '').lower() in ('1', 'yes', 'ok', 'true'):
+        loop.stop()
