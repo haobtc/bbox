@@ -183,7 +183,8 @@ def supervised_run(cor: Callable, args:Tuple=(), kwargs:Optional[Dict[str, Any]]
             except Exception as e:
                 if exc and isinstance(e, exc):
                     logging.warn('except on supervised_run, will restart', exc_info=True)
-                    await sleep(restart_sleep)
                 else:
                     raise
+            if get_cluster().is_running():
+                await sleep(restart_sleep)
     asyncio.ensure_future(__wrapped())

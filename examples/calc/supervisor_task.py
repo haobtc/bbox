@@ -15,7 +15,7 @@ class MyError(Exception):
 class Handler(BaseHandler):
     async def mytask(self, i):
         print('begin task', i)
-        #await sleep(2 * random.random())
+        await sleep(2 * random.random())
         print('end task', i)
         raise MyError('bad')
 
