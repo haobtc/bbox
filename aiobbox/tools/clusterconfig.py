@@ -6,7 +6,7 @@ import asyncio
 from argparse import Namespace, ArgumentParser
 import aiobbox.client as bbox_client
 from aiobbox.cluster import get_cluster, get_sharedconfig
-from aiobbox.utils import guess_json, json_pp, semanticbool
+from aiobbox.utils import guess_json, json_pp, semanticbool, sleep
 from aiobbox.handler import BaseHandler
 
 async def get_config(args: Namespace) -> None:
@@ -17,6 +17,21 @@ async def get_config(args: Namespace) -> None:
     else:
         r = get_sharedconfig().get_section_strict(sec_key)
     print(json_pp(r))
+
+async def watch_config(args: Namespace) -> None:
+    last_pp = None
+    while get_cluster().is_running():
+        sec_key = args.sec_key
+        if '/' in sec_key:
+            sec, key = sec_key.split('/')
+            r = get_sharedconfig().get_strict(sec, key)
+        else:
+            r = get_sharedconfig().get_section_strict(sec_key)
+        cpp = json_pp(r)
+        if cpp != last_pp:
+            last_pp = cpp
+            print(cpp)
+        await sleep(1.0)
 
 async def set_config(args: Namespace) -> None:
     sec, key = args.sec_key.split('/')
@@ -37,6 +52,7 @@ async def clear_config(args: Namespace) -> None:
 async def dump_config(args: Namespace) -> None:
     data = get_sharedconfig().dump_json()
     print(data)
+
 
 async def load_config(args: Namespace) -> None:
     jsonfile = args.jsonfile
@@ -64,6 +80,13 @@ class Handler(BaseHandler):
             type=str,
             help='sec/key or sec')
         p.set_defaults(func=get_config)
+
+        p = subp.add_parser('watch', help='watch config')
+        p.add_argument(
+            'sec_key',
+            type=str,
+            help='sec/key or sec')
+        p.set_defaults(func=watch_config)
 
         p = subp.add_parser('set', help='set config')
         p.add_argument(

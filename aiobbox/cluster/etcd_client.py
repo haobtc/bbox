@@ -112,11 +112,13 @@ class EtcdClient:
             for cc in self.walk(c):
                 yield cc
 
-    async def watch_changes(self, component, changed):
-        await changed()
-        last_index = self.etcdIndex + 1
+    async def watch_changes(self, component:str, changed:Callable) -> None:
+        #last_index = self.etcdIndex + 1
+        last_index = None
 
         while self.cont:
+            if last_index is None:
+                await changed()
             logger.debug('watching %s from index %s', component, last_index)
             #print('watch', component, last_index)
             try:
@@ -138,13 +140,15 @@ class EtcdClient:
                 logger.debug(
                     'timeout error during watching %s',
                     component)
+            except etcd.EtcdEventIndexCleared:
+                logger.info('etcd event index cleared')
+                last_index = True
             except ETCDError:
                 logger.warn('etcd error, sleep for a while')
                 await asyncio.sleep(1)
-            await changed(None)
+            #await changed(None)
 
-
-    def acquire_lock(self, name):
+    def acquire_lock(self, name: str) -> 'SimpleLock':
         return SimpleLock(self,
                           self.path('_lock/{}'.format(name)))
 

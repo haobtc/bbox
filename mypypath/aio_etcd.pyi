@@ -32,3 +32,6 @@ class EtcdKeyNotFound(Exception):
 
 class EtcdAlreadyExist(Exception):
     ...
+
+class EtcdEventIndexCleared(Exception):
+    ...

@@ -176,9 +176,11 @@ def supervised_run(cor: Callable, args:Tuple=(), kwargs:Optional[Dict[str, Any]]
     from .cluster import get_cluster
     if kwargs is None:
         kwargs = {}
+
     async def __wrapped() -> None:
         while get_cluster().is_running():
             try:
+                assert isinstance(kwargs, dict)
                 await cor(*args, **kwargs)
             except Exception as e:
                 if exc and isinstance(e, exc):
