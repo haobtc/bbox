@@ -141,7 +141,7 @@ class EtcdClient:
                     'timeout error during watching %s',
                     component)
             except etcd.EtcdEventIndexCleared:
-                logger.info('etcd event index cleared')
+                logger.debug('etcd event index cleared')
                 last_index = None
             except ETCDError:
                 logger.warn('etcd error, sleep for a while')
