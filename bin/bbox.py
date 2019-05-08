@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+from typing import Optional, List
 import sys
 import logging
 import signal
 import signal
-import argparse
+from argparse import ArgumentParser, Namespace
 import asyncio
 from aiobbox.log import config_log
 from aiobbox.handler import BaseHandler
@@ -32,7 +33,7 @@ sub_modules = [
     ]
 
 def main():
-    top_parser = argparse.ArgumentParser(
+    top_parser = ArgumentParser(
         prog='bbox.py',
         description="bixin's micro services toolkit")
 
@@ -52,7 +53,7 @@ def main():
 
     run(top_parser)
 
-def run(top_parser, input_args=None):
+def run(top_parser:ArgumentParser, input_args:Optional[List[str]]=None) -> None:
     args = top_parser.parse_args(input_args)
     loop = asyncio.get_event_loop()
 
@@ -70,6 +71,9 @@ def run(top_parser, input_args=None):
                 loop.run_forever()
         except KeyboardInterrupt:
             pass
+        except RuntimeError as e:
+            if 'Event loop stopped before Future completed' not in str(e):
+                raise
         handler.shutdown()
 
 def on_term_sig():

@@ -18,6 +18,7 @@ class Handler(BaseHandler):
         await sleep(2 * random.random())
         print('end task', i)
         raise MyError('bad')
+        # raise Exception('bad')
 
     async def run(self, args):
         for i in range(10, 20):

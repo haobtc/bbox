@@ -186,6 +186,7 @@ def supervised_run(cor: Callable, args:Tuple=(), kwargs:Optional[Dict[str, Any]]
                 if exc and isinstance(e, exc):
                     logging.warn('except on supervised_run, will restart', exc_info=True)
                 else:
+                    logging.error('unexpected exception on supervised_run', exc_info=True)
                     raise
             if get_cluster().is_running():
                 await sleep(restart_sleep)
