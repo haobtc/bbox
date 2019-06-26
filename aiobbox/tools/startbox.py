@@ -41,12 +41,16 @@ class Handler(BaseHandler):
             help='time to live')
 
     async def run(self, args: Namespace) -> None:
+
         if get_ticket().language != 'python3':
             print('language must be python3', file=sys.stderr)
             sys.exit(1)
 
         if not args.boxid:
             args.boxid = uuid.uuid4().hex
+
+        loop = asyncio.get_event_loop()
+        loop.set_exception_handler(coroutine_exc_handler)
 
         mod_handlers = []
         for modspec in args.module:
@@ -80,3 +84,10 @@ class Handler(BaseHandler):
         for h in self.mod_handlers:
             h.shutdown()
         loop.run_until_complete(get_box().deregister())
+
+def coroutine_exc_handler(loop, context):
+    loop.default_exception_handler(context)
+    exc = context.get('exception')
+    logging.error('coroutine exception %s context %s', exc, context)
+    if exc and os.getenv('BBOX_COR_EXIT', '').lower() in ('1', 'yes', 'ok', 'true'):
+        loop.stop()

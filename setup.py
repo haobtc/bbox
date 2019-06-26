@@ -2,7 +2,7 @@ from distutils.core import setup
 from setuptools import find_packages
 
 setup(name='aiobbox',
-      version='0.4.10',
+      version='0.4.11',
       description='multi-lang, highly available rpc framework',
       author='Zeng Ke',
       author_email='zk@bixin.com',

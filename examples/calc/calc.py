@@ -13,6 +13,10 @@ def _add2num(a:int, b:int) -> int:
 async def add2num(request, a, b):
     return _add2num(a, b)
 
+@srv.method('div2num')
+async def div2num(request, a, b):
+    return a / b
+
 @srv.method('add2sleep')
 async def add2sleep(request, a, b, sec):
     print('add2sleep() would return after', sec, 'seconds')
