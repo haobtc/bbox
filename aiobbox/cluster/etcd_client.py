@@ -86,7 +86,7 @@ class EtcdClient:
         except etcd.EtcdException:
             logger.warn('etcd exception', exc_info=True)
             self.client_failed = True
-            raise
+            raise ETCDError
 
     async def write(self, *args, **kw):
         return await self._wrap_etcd(self.client.write,
