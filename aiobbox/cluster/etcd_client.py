@@ -83,6 +83,10 @@ class EtcdClient:
             logger.warn('connection failed')
             self.client_failed = True
             raise ETCDError
+        except etcd.EtcdEventIndexCleared:
+            logger.debug('etcd event index cleared')
+            self.client_failed = True
+            raise
         except etcd.EtcdException:
             logger.warn('etcd exception', exc_info=True)
             self.client_failed = True
