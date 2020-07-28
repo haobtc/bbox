@@ -16,8 +16,11 @@ WrappedETCDFunc = Callable[..., Any]
 logger = logging.getLogger('bbox')
 
 class EtcdClient:
-    etcdIndex = 0
-    def path(self, p:str) -> str:
+    etcdIndex: int = 0
+    cont: bool = False
+    _client: Optional[etcd.Client]
+
+    def _path(self, p:str) -> str:
         ticket = get_ticket()
         if p.startswith('/'):
             return '/{}{}'.format(ticket.prefix, p)
@@ -28,9 +31,13 @@ class EtcdClient:
     def prefix(self) -> str:
         return get_ticket().prefix
 
+    @property
+    def ready(self) -> bool:
+        return not not self._client
+
     def connect(self) -> None:
-        self.client = None
-        self.client_failed = False
+        self._client = None
+        self._client_failed = False
         self.cont = True
 
         protocol = 'http'
@@ -41,7 +48,7 @@ class EtcdClient:
 
         if len(etcd_list) == 1:
             host, port = etcd_list[0].split(':')
-            self.client = etcd.Client(
+            self._client = etcd.Client(
                 host=host,
                 port=int(port),
                 protocol=protocol,
@@ -55,58 +62,65 @@ class EtcdClient:
             host_list = [split_addr(e)
                          for e in etcd_list]
 
-            self.client = etcd.Client(
+            self._client = etcd.Client(
                 host=tuple(host_list),
                 protocol=protocol,
                 allow_reconnect=True,
                 allow_redirect=True)
 
     def close(self) -> None:
-        if self.client:
-            self.client.close()
+        if self._client:
+            self._client.close()
         self.cont = False
 
     # etcd client wraps
-    async def _wrap_etcd(self, fn:WrappedETCDFunc, *args, **kw) -> Any:
+    async def _wrap_etcd(self, fn: WrappedETCDFunc, *args, **kw) -> Any:
         try:
             r = await fn(*args, **kw)
             self.etcdIndex = max(r.etcd_index, self.etcdIndex)
-            self.client_failed = False
+            self._client_failed = False
             return r
         except aiohttp.ClientError as e:
             logger.warn('http client error', exc_info=True)
-            self.client_failed = True
+            self._client_failed = True
             raise ETCDError
         except etcd.EtcdConnectionFailed:
             #import traceback
             #traceback.print_exc()
             logger.warn('connection failed')
-            self.client_failed = True
+            self._client_failed = True
             raise ETCDError
         except etcd.EtcdEventIndexCleared:
             logger.debug('etcd event index cleared')
-            self.client_failed = True
+            self._client_failed = True
             raise
-        except etcd.EtcdException:
+        except etcd.EtcdException: # type: ignore
             logger.warn('etcd exception', exc_info=True)
-            self.client_failed = True
+            self._client_failed = True
             raise
 
-    async def write(self, *args, **kw):
-        return await self._wrap_etcd(self.client.write,
-                                     *args, **kw)
+    async def write(self, key, value, **kw):
+        key = self._path(key)
+        return await self._wrap_etcd(
+            self._client.write,
+            key, value, **kw)
 
-    async def read(self, *args, **kw):
-        return await self._wrap_etcd(self.client.read,
-                                     *args, **kw)
+    async def read(self, key, **kw):
+        key = self._path(key)
+        return await self._wrap_etcd(
+            self._client.read,
+            key, **kw)
 
-    async def refresh(self, *args, **kw):
-        return await self._wrap_etcd(self.client.refresh,
-                                     *args, **kw)
+    async def refresh(self, key, **kw):
+        key = self._path(key)
+        return await self._wrap_etcd(
+            self._client.refresh, key, **kw)
 
-    async def delete(self, *args, **kw):
-        return await self._wrap_etcd(self.client.delete,
-                                     *args, **kw)
+    async def delete(self, key, **kw):
+        key = self._path(key)
+        return await self._wrap_etcd(
+            self._client.delete,
+            key, **kw)
 
     def walk(self, v):
         yield v
@@ -129,7 +143,7 @@ class EtcdClient:
                 # watch every 1 min to
                 # avoid timeout exception
                 chg = await asyncio.wait_for(
-                    self.read(self.path(component),
+                    self.read(self._path(component),
                               recursive=True,
                               waitIndex=last_index,
                               wait=True),
@@ -154,7 +168,7 @@ class EtcdClient:
 
     def acquire_lock(self, name: str) -> 'SimpleLock':
         return SimpleLock(self,
-                          self.path('_lock/{}'.format(name)))
+                          self._path('_lock/{}'.format(name)))
 
 class SimpleLock:
     lock_keys: Dict[str, str] = {}
@@ -171,9 +185,9 @@ class SimpleLock:
     async def __aexit__(self, exc_type, exc, tb):
         return await self.release()
 
-    def __init__(self, cc, path):
-        self.client = cc
-        self.path = path
+    def __init__(self, cc: EtcdClient, lock_path:str):
+        self._client = cc
+        self._lock_path = lock_path
         self.uuid = uuid.uuid4().hex
         self.key = None
         self.cont = True
@@ -186,7 +200,7 @@ class SimpleLock:
     async def acquire(self):
         if self.client.client_failed:
             raise ETCDError
-        r = await self.client.write(self.path, self.uuid, ttl=5, append=True)
+        r = await self.client.write(self._lock_path, self.uuid, ttl=5, append=True)
         self.key = r.key
         self.lock_keys[r.key] = self.uuid
         asyncio.ensure_future(self.keep_key())
@@ -201,7 +215,7 @@ class SimpleLock:
             self.lock_keys.pop(self.key, None)
             self.key = None
         else:
-            r = await self.client.read(self.path,
+            r = await self.client.read(self._lock_path,
                                        recursive=True)
             for n in self.walk(r):
                 if n.value == self.uuid:
@@ -215,7 +229,7 @@ class SimpleLock:
             self.cont = False
             return False
         try:
-            r = await self.client.read(self.path,
+            r = await self.client.read(self._lock_path,
                                        sorted=True,
                                        recursive=True)
         except ETCDError:
@@ -223,9 +237,9 @@ class SimpleLock:
             return False
         waiters = []
         for n in self.client.walk(r):
-            if self.path == n.key:
+            if self._lock_path == n.key:
                 continue
-            rest_key = n.key[len(self.path):]
+            rest_key = n.key[len(self._lock_path):]
             if re.match(r'/?(?P<name>[^/]+)$', rest_key):
                 waiters.append(n.key)
         if waiters:
@@ -240,7 +254,7 @@ class SimpleLock:
         while self.cont and not (await self.check_acquired()):
             try:
                 chg = await asyncio.wait_for(
-                    self.client.read(self.path,
+                    self._client.read(self._lock_path,
                                      wait=True,
                                      recursive=True),
                     timeout=20)

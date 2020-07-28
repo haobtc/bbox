@@ -20,7 +20,7 @@ logger = logging.getLogger('bbox')
 _whitelist = None
 
 # proxy server
-async def handle_rpc(request:web.Request) -> web.Response:
+async def handle_rpc(request: web.Request) -> web.Response: # type: ignore
     body = await request.json()
 
     try:

@@ -18,15 +18,23 @@ logger = logging.getLogger('bbox')
 
 BOX_TTL = 10
 
-class BoxAgent(EtcdClient):
+class BoxAgent:
     srv_names: List[str]
     bind: str = ''
     extbind: str = ''
+    etcd_client: EtcdClient
 
     def __init__(self) -> None:
         super(BoxAgent, self).__init__()
         self.ssl_prefix: Optional[str] = None
         self.started: bool = False
+        self.etcd_client = EtcdClient()
+
+    def set_cont(self, cont: bool) -> None:
+        self.etcd_client.cont = cont
+    def get_cont(self) -> bool:
+        return self.etcd_client.cont
+    cont = property(get_cont, set_cont)
 
     async def start(self, boxid: str, srv_names: List[str]) -> None:
         assert not self.started
@@ -36,7 +44,7 @@ class BoxAgent(EtcdClient):
         self.srv_names = srv_names
         self.bind = ''
         self.extbind = ''
-        self.connect()
+        self.etcd_client.connect()
         await self.register()
         self.started = True
 
@@ -87,10 +95,10 @@ class BoxAgent(EtcdClient):
                 # use random selected port if not specified
                 extbind = '{}:{}'.format(extbind, port)
 
-            key = self.path('boxes/{}'.format(extbind))
+            key = f'boxes/{extbind}'
             value = self.box_info(extbind=extbind)
             try:
-                await self.write(key, value,
+                await self.etcd_client.write(key, value,
                                  ttl=BOX_TTL,
                                  prevExist=False)
                 self.extbind = extbind
@@ -109,11 +117,11 @@ class BoxAgent(EtcdClient):
 
     async def deregister(self) -> None:
         self.cont = False
-        if not self.bind or not self.client:
+        if not self.bind or not self.etcd_client:
             return
-        key = self.path('boxes/{}'.format(self.bind))
+        key = f'boxes/{self.bind}'
         try:
-            await self.delete(key)
+            await self.etcd_client.delete(key)
         except ETCDError:
             pass
         logging.debug('box %s deregistered from cluster', self.boxid)
@@ -123,21 +131,22 @@ class BoxAgent(EtcdClient):
             await asyncio.sleep(3)
             if not self.cont:
                 break
-            if not self.client or not self.bind:
+            if not self.etcd_client.ready or not self.bind:
                 logger.debug('etcd client or bind are empty')
             else:
-                key = self.path('boxes/{}'.format(self.bind))
+                key = f'boxes/{self.bind}'
                 try:
-                    await self.refresh(key, ttl=BOX_TTL)
+                    await self.etcd_client.refresh(key, ttl=BOX_TTL)
                 except etcd.EtcdKeyNotFound:
                     logger.warn('etcd key not found %s', key)
                     value = self.box_info()
                     try:
-                        await self.write(key, value, ttl=BOX_TTL)
+                        await self.etcd_client.write(key, value, ttl=BOX_TTL)
                     except ETCDError:
                         logger.warn('etc error on write')
                 except ETCDError:
                     logger.warn('etcd error on refresh')
+
 
 _agent = BoxAgent()
 def get_box() -> BoxAgent:

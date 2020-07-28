@@ -2,7 +2,7 @@ from distutils.core import setup
 from setuptools import find_packages
 
 setup(name='aiobbox',
-      version='0.4.13',
+      version='0.5.0',
       description='multi-lang, highly available rpc framework',
       author='Zeng Ke',
       author_email='zk@bixin.com',
@@ -18,12 +18,14 @@ setup(name='aiobbox',
           'Topic :: Micro-Services',
       ],
       install_requires=[
+          'dateutils',
           'aiohttp',
           'aiochannel',
           'websockets',
           'aio_etcd',
           'netifaces',
-          'aioredis'
+          'aioredis',
+          'etcd3-py',
       ],
       python_requires='>=3.6',
 )

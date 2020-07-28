@@ -76,8 +76,9 @@ class HttpClient:
                     'url %s, payload %s, used %s seconds',
                     url, payload, used_time)
 
-    def __del__(self) -> None:
-        self.session = None
+    async def close(self):
+        if self.session is not None:
+            await self.session.close()
 
 class ServiceRef:
     def __init__(self, srv_name: str, pool: 'ServicePool') -> None:
@@ -112,7 +113,7 @@ class SimpleHttpPool(ServicePool):
         self.pool: Dict[str, ServiceRef] = {}
         self.policy: int = self.RANDOM
 
-    def get_client(self, srv_name: str, policy: int=None, boxid: str=None):
+    def get_client(self, srv_name: str, policy: int=None, boxid: str=None) -> Optional[HttpClient]:
         policy = policy or self.policy
         connects = []
         cc = get_cluster()
@@ -131,6 +132,7 @@ class SimpleHttpPool(ServicePool):
         if connects:
             connect = random.choice(connects)
             return HttpClient(connect, expect='json')
+        return None
 
     def __getattr__(self, name: str) -> ServiceRef:
         return ServiceRef(name, self)
@@ -173,7 +175,9 @@ class SimpleHttpPool(ServicePool):
             return await client.request_obj(
                 req, timeout=timeout)
         except ConnectionError:
-            assert not client.connected
+            #assert not client.
             raise Retry()
+        finally:
+            await client.close()
 
 pool = SimpleHttpPool()
