@@ -54,7 +54,7 @@ async def handle_metrics(request):
             raise web.HTTPUnauthorized()
 
     c = get_cluster()
-    with ClientSession() as session:
+    async with ClientSession() as session:
         if collect_localbox:
             fns = [get_box_metrics(bind)
                    for bind in c.get_local_boxes()]
