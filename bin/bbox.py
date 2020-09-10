@@ -24,7 +24,6 @@ sub_modules = [
     ('rpc', 'aiobbox.tools.rpcclient'),
     ('config', 'aiobbox.tools.clusterconfig'),
     ('cluster', 'aiobbox.tools.clusterop'),
-    ('lock', 'aiobbox.tools.watchlock'),
     ('printticket', 'aiobbox.tools.printticket'),
     ('doc', 'aiobbox.tools.printdoc'),
     ('metrics', 'aiobbox.tools.metrics'),

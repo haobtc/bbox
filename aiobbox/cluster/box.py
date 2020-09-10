@@ -16,7 +16,7 @@ from .cfg import get_sharedconfig
 
 logger = logging.getLogger('bbox')
 
-BOX_TTL = 10
+BOX_TTL = 1000
 
 class BoxAgent:
     srv_names: List[str]
@@ -98,12 +98,9 @@ class BoxAgent:
             key = f'boxes/{extbind}'
             value = self.box_info(extbind=extbind)
             try:
-                await self.etcd_client.write(key, value,
-                                 ttl=BOX_TTL,
-                                 prevExist=False)
+                await self.etcd_client.write_n_keep(key, value, BOX_TTL)
                 self.extbind = extbind
                 self.bind = '{}:{}'.format(ticket.bind_ip, port)
-                asyncio.ensure_future(self.update())
                 return
             except ETCDError:
                 await asyncio.sleep(0.1)
@@ -126,27 +123,9 @@ class BoxAgent:
             pass
         logging.debug('box %s deregistered from cluster', self.boxid)
 
-    async def update(self) -> None:
-        while self.cont:
-            await asyncio.sleep(3)
-            if not self.cont:
-                break
-            if not self.etcd_client.ready or not self.bind:
-                logger.debug('etcd client or bind are empty')
-            else:
-                key = f'boxes/{self.bind}'
-                try:
-                    await self.etcd_client.refresh(key, ttl=BOX_TTL)
-                except etcd.EtcdKeyNotFound:
-                    logger.warn('etcd key not found %s', key)
-                    value = self.box_info()
-                    try:
-                        await self.etcd_client.write(key, value, ttl=BOX_TTL)
-                    except ETCDError:
-                        logger.warn('etc error on write')
-                except ETCDError:
-                    logger.warn('etcd error on refresh')
-
+    # async def update(self, key: str) -> None:
+    #     #key = f'boxes/{self.bind}'
+    #     await self.etcd_client.keep_key(key, BOX_TTL)
 
 _agent = BoxAgent()
 def get_box() -> BoxAgent:

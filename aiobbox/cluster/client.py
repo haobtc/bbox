@@ -8,9 +8,10 @@ import asyncio
 import aio_etcd as etcd
 import aiohttp
 from collections import defaultdict
-from aiobbox.utils import json_to_str, localbox_ip
+from aiobbox.utils import json_to_str, localbox_ip, force_str
 from aiobbox.exceptions import RegisterFailed, ETCDError
 from .etcd_client import EtcdClient
+
 from .cfg import SharedConfig, get_sharedconfig
 
 logger = logging.getLogger('bbox')
@@ -55,24 +56,18 @@ class ClientAgent:
     async def get_boxes(self, _chg:Any=None):
         new_route: Dict[str, List[str]] = defaultdict(list)
         boxes = {}
-        try:
-            r = await self.etcd_client.read(
-                'boxes',
-                recursive=True)
-            for v in self.etcd_client.walk(r):
-                m = re.match(r'/[^/]+/boxes/(?P<box>[^/]+)$', v.key)
-                if not m:
-                    continue
-                if not v.value:
-                    #logger.warn('v has no value %s', v)
-                    continue
-                box_info = json.loads(v.value)
-                bind = box_info['bind']
-                boxes[bind] = box_info
-                for srv in box_info['services']:
-                    new_route[srv].append(bind)
-        except etcd.EtcdKeyNotFound:
-            pass
+        async for v in self.etcd_client.read_components('boxes'):
+            m = re.match(r'/[^/]+/boxes/(?P<box>[^/]+)$', force_str(v.key))
+            if not m:
+                continue
+            if not v.value:
+                #logger.warn('v has no value %s', v)
+                continue
+            box_info = json.loads(v.value)
+            bind = box_info['bind']
+            boxes[bind] = box_info
+            for srv in box_info['services']:
+                new_route[srv].append(bind)
 
         self.route = new_route
         self.boxes = boxes
@@ -134,29 +129,21 @@ class ClientAgent:
 
     async def get_configs(self, _chg:Any=None) -> None:
         reg = r'/(?P<prefix>[^/]+)/configs/(?P<sec>[^/]+)/(?P<key>[^/]+)'
-        try:
-            r = await self.etcd_client.read(
-                'configs',
-                recursive=True)
-            new_conf = SharedConfig()
-            for v in self.etcd_client.walk(r):
-                m = re.match(reg, v.key)
-                if m:
-                    assert m.group('prefix') == self.etcd_client.prefix
-                    sec = m.group('sec')
-                    key = m.group('key')
-                    new_conf.set(sec, key, json.loads(v.value))
 
-            curr_conf = get_sharedconfig()
-            delete_set, add_set = curr_conf.compare_sections(
-                new_conf.sections)
-            if delete_set or add_set:
-                curr_conf.replace_with(new_conf)
+        new_conf = SharedConfig()
+        async for v in self.etcd_client.read_components('configs'):
+            m = re.match(reg, force_str(v.key))
+            if m:
+                assert m.group('prefix') == self.etcd_client.prefix
+                sec = m.group('sec')
+                key = m.group('key')
+                new_conf.set(sec, key, json.loads(v.value))
 
-        except etcd.EtcdKeyNotFound:
-            pass
-        except ETCDError:
-            pass
+        curr_conf = get_sharedconfig()
+        delete_set, add_set = curr_conf.compare_sections(
+            new_conf.sections)
+        if delete_set or add_set:
+            curr_conf.replace_with(new_conf)
 
     async def _watch_configs(self):
         return await self.etcd_client.watch_changes(

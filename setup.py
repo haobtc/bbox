@@ -2,7 +2,7 @@ from distutils.core import setup
 from setuptools import find_packages
 
 setup(name='aiobbox',
-      version='0.5.1',
+      version='0.5.2',
       description='multi-lang, highly available rpc framework',
       author='Zeng Ke',
       author_email='zk@bixin.com',
@@ -17,6 +17,7 @@ setup(name='aiobbox',
           'Operating System :: POSIX',
           'Topic :: Micro-Services',
       ],
+
       install_requires=[
           'dateutils',
           'aiohttp',

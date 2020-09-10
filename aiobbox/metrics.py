@@ -6,9 +6,6 @@ from aiobbox.cluster import get_cluster
 MEntry = Tuple[Dict[str, Any], float]
 
 class IMetricsEntry:
-    #name: Optional[str] = None
-    #help: Optional[str] = None
-    #type: Optional[str] = 'gauge'
     name: str = ''
     help: str = ''
     type: str = 'gauge'
