@@ -16,7 +16,7 @@ from .cfg import get_sharedconfig
 
 logger = logging.getLogger('bbox')
 
-BOX_TTL = 1000
+BOX_TTL = 6
 
 class BoxAgent:
     srv_names: List[str]
