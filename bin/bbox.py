@@ -47,6 +47,12 @@ def main():
         handler = mod.Handler()
         help_msg = getattr(handler, 'help', '')
         parser = sub_parsers.add_parser(sub_cmd, help=help_msg)
+        # add sentry config
+        parser.add_argument(
+            '--sentry_config',
+            type=str,
+            default='',
+            help='sentry config')
         handler.add_arguments(parser)
         parser.set_defaults(handler=handler)
 
@@ -55,6 +61,13 @@ def main():
 def run(top_parser:ArgumentParser, input_args:Optional[List[str]]=None) -> None:
     args = top_parser.parse_args(input_args)
     loop = asyncio.get_event_loop()
+
+    sentry_config = args.sentry_config
+    if sentry_config:
+        sentry_sdk.init(
+              dsn=sentry_config,
+              integrations=[AioHttpIntegration()]
+        )
 
     handler = getattr(args, 'handler', None)
     if handler is None:
