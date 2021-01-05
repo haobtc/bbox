@@ -1,4 +1,6 @@
 from typing import Dict, Any, List, Tuple, Union, Iterable, Optional
+from time import time
+import logging
 import asyncio
 from collections import defaultdict
 from aiobbox.cluster import get_cluster
@@ -23,9 +25,17 @@ def add_metrics(entry:IMetricsEntry) -> None:
     #assert hasattr(entry, 'collect')
     _metrics.append(entry)
 
+async def collect_entry(entry: IMetricsEntry) -> List[MEntry]:
+    now = time()
+    try:
+        return await entry.collect()
+    finally:
+        secs = time() - now
+        logging.info('collecting metrics %s takes %s seconds', entry.name, secs)
+
 async def collect_metrics():
     results = await asyncio.gather(
-        *[entry.collect() for entry in _metrics])
+        *[collect_entry(entry) for entry in _metrics])
 
     meta = {}
     lines = []
@@ -87,8 +97,8 @@ class MetricsCount(IMetricsEntry):
 
     async def collect(self) -> List[MEntry]:
         metr: List[MEntry] = []
-        for coin, cnt in self.values.items():
-            mentry: MEntry = ({self.field_name: coin}, cnt)
+        for item, cnt in self.values.items():
+            mentry: MEntry = ({self.field_name: item}, cnt)
             metr.append(mentry)
         self.values.clear()
         return metr
