@@ -27,6 +27,8 @@ setup(name='aiobbox',
           'netifaces',
           'aioredis',
           'etcd3-py',
+          'aiocontextvars',
+          'sentry-sdk',
       ],
       python_requires='>=3.6',
 )
