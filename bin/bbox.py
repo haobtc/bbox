@@ -10,6 +10,8 @@ import asyncio
 from aiobbox.log import config_log
 from aiobbox.handler import BaseHandler
 from aiobbox.utils import import_module
+import sentry_sdk
+from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
 sys.path.append('.')
 
