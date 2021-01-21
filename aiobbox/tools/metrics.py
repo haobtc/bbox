@@ -27,23 +27,21 @@ collect_localbox = False
 
 bearer_token = None
 
-_http_clients: Dict[str, HttpClient] = {}
-
 async def get_box_metrics(connect) -> Dict[str, Any]:
-    if connect not in _http_clients:
-        client = HttpClient(connect)
-        _http_clients[connect] = client
-    else:
-        client = _http_clients[connect]
+    client = HttpClient(connect)
+    url = urljoin(client.url_prefix, '/metrics.json')
     try:
-        url = urljoin(client.url_prefix, '/metrics.json')
         assert client.session is not None
         #resp = await client.session.get(url)
-        async with client.session.get(url) as resp:
+        async with client.session.get(url, timeout=30) as resp:
             return await resp.json()
     except ClientConnectionError:
-        logger.error('client connection error to %s', connect, exc_info=True)
+        logger.error('client connection error to %s, url=%s', connect, url, exc_info=True)
         return report_box_failure(connect)
+    except asyncio.TimeoutError:
+        logger.error('client timeout to %s, url=%s', connect, url, exc_info=True)
+        return report_box_failure(connect)
+
     #return await resp.json()
 
 async def handle_metrics(request):

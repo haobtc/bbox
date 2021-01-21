@@ -1,9 +1,14 @@
 import sys
+import logging
 import asyncio
+from random import random
 import urllib.parse as urlparse
+
 from aiobbox.server import Service, ServiceError, Request
 from aiobbox.cluster import get_box
 from aiobbox.utils import sleep
+from aiobbox.metrics import add_metrics
+from aiobbox.handler import BaseHandler
 
 srv = Service()
 def _add2num(a:int, b:int) -> int:
@@ -61,5 +66,20 @@ async def web(request, webreq):
 
 srv.register('calc')
 
+class RandomMetrics:
+    name = 'random_sample'
+    help = 'random sample'
+    type = 'gauge'
+
+    async def collect(self):
+        metr = []
+        metr.append(({}, random()))
+        return metr
+
 async def shutdown():
     print('calc shutdown')
+
+class Handler(BaseHandler):
+    async def start(self, args):
+        logging.info('add metrics')
+        add_metrics(RandomMetrics())
