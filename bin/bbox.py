@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from typing import Optional, List
 import sys
+import os
 import logging
 import signal
 import signal
@@ -9,6 +10,8 @@ import asyncio
 from aiobbox.log import config_log
 from aiobbox.handler import BaseHandler
 from aiobbox.utils import import_module
+import sentry_sdk
+from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
 sys.path.append('.')
 
@@ -55,6 +58,13 @@ def main():
 def run(top_parser:ArgumentParser, input_args:Optional[List[str]]=None) -> None:
     args = top_parser.parse_args(input_args)
     loop = asyncio.get_event_loop()
+
+    sentry_url = os.environ.get('SENTRY_URL')
+    if sentry_url:
+        sentry_sdk.init(
+              dsn=sentry_url,
+              integrations=[AioHttpIntegration()]
+        )
 
     handler = getattr(args, 'handler', None)
     if handler is None:
