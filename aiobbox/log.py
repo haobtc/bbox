@@ -26,7 +26,7 @@ LOGGING = {
     },
     'formatters':{
         'simple':{
-            'format': '[%(asctime)s] %(name)s [%(levelname)s] %(message)s',
+            'format': '[%(asctime)s] %(process)d %(name)s [%(levelname)s] %(message)s',
         },
         'remote':{
             'format': '%(name)s:%(message)s'

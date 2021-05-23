@@ -61,10 +61,12 @@ class Handler(BaseHandler):
         sub_args = parser.parse_args(args.task_params)
         try:
             await get_cluster().start()
+            logger.info('task %s starts', args.module)
             r = await handler.run(sub_args)
             if r is not None:
                 logger.debug('task return %s', r)
         finally:
+            logger.info('task %s stopping', args.module)
             handler.shutdown()
             c = get_cluster()
             c.cont = False

@@ -177,7 +177,7 @@ def supervised_run(cor: Callable, args:Tuple=(), kwargs:Optional[Dict[str, Any]]
     if kwargs is None:
         kwargs = {}
 
-    async def __wrapped() -> None:
+    async def __wrapperco() -> None:
         while get_cluster().is_running():
             try:
                 assert isinstance(kwargs, dict)
@@ -187,7 +187,10 @@ def supervised_run(cor: Callable, args:Tuple=(), kwargs:Optional[Dict[str, Any]]
                     logging.warn('except on supervised_run, will restart', exc_info=True)
                 else:
                     logging.error('unexpected exception on supervised_run', exc_info=True)
-                    raise
+                    #raise
+                    loop = asyncio.get_event_loop()
+                    loop.stop()
+
             if get_cluster().is_running():
                 await sleep(restart_sleep)
-    asyncio.ensure_future(__wrapped())
+    asyncio.ensure_future(__wrapperco())
