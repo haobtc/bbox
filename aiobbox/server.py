@@ -49,7 +49,7 @@ class Service(object):
 
     def method(self, name: str, for_test: bool=False) -> Method:
         def decorator(fn: Method) -> Method:
-            if for_test and not testing.test_mode:
+            if for_test and not testing.test_mode():
                 # this method cannot be added
                 # for non testing env
                 return fn

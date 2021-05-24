@@ -23,7 +23,7 @@ async def create_consumer(request, consumer, reuse):
     cfg = get_sharedconfig()
 
     allow_create_consumer = cfg.get('consumers', 'allow_create')
-    if not testing.test_mode and not allow_create_consumer:
+    if not testing.test_mode() and not allow_create_consumer:
         raise ServiceError('access denied')
 
     if (not isinstance(consumer, str)

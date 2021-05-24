@@ -103,11 +103,16 @@ def localbox_ip(*iplist:str) -> Set[str]:
 def get_bbox_path(path:str) -> Optional[str]:
     rel_path = '.bbox/{}'.format(path)
     p:str
+    envpath = os.getenv('BBOX_PATH', '')
+    if envpath:
+        envpath = f'{envpath}/{path}'
+
     for p in [
+            envpath,
             abs_path(rel_path),
             home_path(rel_path),
             os.path.join('/etc/bbox', path)]:
-        if os.path.exists(p):
+        if p and os.path.exists(p):
             return p
     return None
 

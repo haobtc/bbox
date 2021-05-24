@@ -26,7 +26,7 @@ class Ticket:
                 kw = json.load(f)
                 self.name = kw['name']
                 prefix = kw['prefix']
-                if testing.test_mode:
+                if testing.test_mode():
                     prefix = prefix + '_test'
                 self.prefix = prefix
                 self.bind_ip = kw.get('bind_ip', '127.0.0.1')
@@ -52,3 +52,4 @@ def get_ticket() -> Ticket:
     if not _ticket.loaded:
         _ticket.load()
     return _ticket
+

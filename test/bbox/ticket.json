@@ -1,0 +1,15 @@
+{
+  "bind_ip": "127.0.0.1",
+  "etcd": [
+    "127.0.0.1:2379"
+  ],
+  "extbind": "",
+  "language": "python3",
+  "name": "bboxtest",
+  "port_range": [
+    30000,
+    31000
+  ],
+  "prefix": "1234567890asdfghjkl"
+}
+

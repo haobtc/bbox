@@ -55,7 +55,7 @@ def config_log() -> None:
 
     log_level = os.getenv('BBOX_LOG_LEVEL')
     if not log_level:
-        if testing.test_mode:
+        if testing.test_mode():
             log_level = 'DEBUG'
         else:
             log_level = 'INFO'
