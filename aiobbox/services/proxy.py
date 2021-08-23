@@ -27,7 +27,7 @@ async def handle_rpc(request: web.Request) -> web.Response: # type: ignore
         req = Request(body)
     except DataError as e:
         logger.warn('json parse error %s', body)
-        return web.HTTPBadRequest('json parse error')
+        return web.HTTPBadRequest(body='json parse error')
 
     if _whitelist is not None:
         if not req.allowed(_whitelist):

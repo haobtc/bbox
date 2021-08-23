@@ -52,4 +52,3 @@ def get_ticket() -> Ticket:
     if not _ticket.loaded:
         _ticket.load()
     return _ticket
-

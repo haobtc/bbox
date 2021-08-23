@@ -229,7 +229,10 @@ async def start_server(args):
     srv_names = list(srv_dict.keys())
     curr_box = get_box()
     curr_box.ssl_prefix = args.ssl
-    await curr_box.start(boxid, srv_names)
+    await curr_box.start(boxid, srv_names,
+                         port=args.port,
+                         bind_ip=args.bind_ip,
+                         extbind=args.extbind)
 
     app = web.Application()
     app.router.add_post('/jsonrpc/2.0/api', handle)

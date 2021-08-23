@@ -29,6 +29,24 @@ class Handler(BaseHandler):
             help='box id')
 
         parser.add_argument(
+            '--port',
+            type=str,
+            default='',
+            help='custom port instead of using ticket')
+
+        parser.add_argument(
+            '--bind_ip',
+            type=str,
+            default='',
+            help='custom bind_ip instead of using ticket')
+
+        parser.add_argument(
+            '--extbind',
+            type=str,
+            default='',
+            help='external visible bind instead of using ticket')
+
+        parser.add_argument(
             '--ssl',
             type=str,
             default='',

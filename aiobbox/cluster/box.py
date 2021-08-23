@@ -29,6 +29,7 @@ class BoxAgent:
         self.ssl_prefix: Optional[str] = None
         self.started: bool = False
         self.etcd_client = EtcdClient()
+        self.override_ticket: Dict[str, Any] = {}
 
     def set_cont(self, cont: bool) -> None:
         self.etcd_client.cont = cont
@@ -36,17 +37,31 @@ class BoxAgent:
         return self.etcd_client.cont
     cont = property(get_cont, set_cont)
 
-    async def start(self, boxid: str, srv_names: List[str]) -> None:
+    async def start(self, boxid: str, srv_names: List[str], **ticket) -> None:
         assert not self.started
         assert boxid
 
         self.boxid = boxid
         self.srv_names = srv_names
+
         self.bind = ''
         self.extbind = ''
+
+        str_port = ticket.get('port')
+        if str_port:
+            if ':' in str_port:
+                port_start, port_end = [int(v) for v in str_port.split(':')]
+            else:
+                port_start = int(str_port)
+                port_end = port_start + 1
+            ticket['port_range'] = [port_start, port_end]
+
+        self.override_ticket = ticket
+
         self.etcd_client.connect()
         await self.register()
         self.started = True
+
 
     def box_info(self, extbind: str=None) -> str:
         extbind = extbind or self.extbind
@@ -67,13 +82,24 @@ class BoxAgent:
 
     async def register(self, retry:int=100) -> None:
         ticket = get_ticket()
+        port_range = None
+        if self.override_ticket.get('port_range'):
+            port_range = self.override_ticket['port_range']
+
+        if self.override_ticket.get('bind_ip'):
+            ticket.bind_ip = self.override_ticket['bind_ip']
+
+        if self.override_ticket.get('extbind'):
+            ticket.extbind = self.override_ticket['extbind']
+
         for retry_t in range(retry + 1):
             if self.bind:
                 return
 
-            port_range = self.get_box_config(
-                'port_range',
-                default=ticket.port_range)
+            if port_range is None:
+                port_range = self.get_box_config(
+                    'port_range',
+                    default=ticket.port_range)
 
             assert len(port_range) == 2
             assert port_range[0] < port_range[1], 'invalid port range {}'.format(port_range)
