@@ -79,13 +79,13 @@ class EtcdClient:
             self._client_failed = False
             return r
         except aiohttp.ClientError as e:
-            logger.warn('http client error', exc_info=True)
+            logger.warning('http client error', exc_info=True)
             self._client_failed = True
             raise ETCDError
         except etcd.EtcdConnectionFailed:
             #import traceback
             #traceback.print_exc()
-            logger.warn('connection failed')
+            logger.warning('connection failed')
             self._client_failed = True
             raise ETCDError
         except etcd.EtcdEventIndexCleared:
@@ -93,7 +93,7 @@ class EtcdClient:
             self._client_failed = True
             raise
         except etcd.EtcdException: # type: ignore
-            logger.warn('etcd exception', exc_info=True)
+            logger.warning('etcd exception', exc_info=True)
             self._client_failed = True
             raise
 
@@ -116,9 +116,12 @@ class EtcdClient:
 
     async def delete(self, key, **kw):
         key = self._path(key)
-        return await self._wrap_etcd(
-            self._client.delete,
-            key, **kw)
+        try:
+            return await self._wrap_etcd(
+                self._client.delete,
+                key, **kw)
+        except etcd.EtcdKeyNotFound:
+            logger.warning('on delete, ectd key not found %s', key)
 
     def _walk(self, v):
         yield v
@@ -168,7 +171,7 @@ class EtcdClient:
                 logger.debug('etcd event index cleared')
                 last_index = None
             except ETCDError:
-                logger.warn('etcd error, sleep for a while')
+                logger.warning('etcd error, sleep for a while')
                 await asyncio.sleep(1)
             #await changed(None)
 
@@ -188,12 +191,12 @@ class EtcdClient:
                 try:
                     await self.refresh(key, ttl=ttl)
                 except etcd.EtcdKeyNotFound:
-                    logger.warn('etcd key not found %s', key)
+                    logger.warning('etcd key not found %s', key)
                     #value = self.box_info()
                     try:
                         await self.write(key, value, ttl=ttl)
                     except ETCDError:
-                        logger.warn('etc error on write')
+                        logger.warning('etc error on write')
                 except ETCDError:
-                    logger.warn('etcd error on refresh')
+                    logger.warning('etcd error on refresh')
 
