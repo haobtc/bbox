@@ -7,6 +7,7 @@ import signal
 from argparse import ArgumentParser, Namespace
 import asyncio
 from aiobbox.log import config_log
+from aiobbox.sentry import setup_sentry
 from aiobbox.handler import BaseHandler
 from aiobbox.utils import import_module
 
@@ -32,6 +33,8 @@ sub_modules = [
     ]
 
 def main():
+    setup_sentry()
+
     top_parser = ArgumentParser(
         prog='bbox.py',
         description="bixin's micro services toolkit")

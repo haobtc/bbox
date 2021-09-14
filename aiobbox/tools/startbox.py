@@ -59,7 +59,6 @@ class Handler(BaseHandler):
             help='time to live')
 
     async def run(self, args: Namespace) -> None:
-
         if get_ticket().language != 'python3':
             print('language must be python3', file=sys.stderr)
             sys.exit(1)
@@ -82,11 +81,11 @@ class Handler(BaseHandler):
         # start cluster client
         await get_cluster().start()
         src, handler = await bbox_server.start_server(args)
-
+        self.mod_handlers = mod_handlers
         for h in mod_handlers:
             await h.start(args)
         self.handler = handler
-        self.mod_handlers = mod_handlers
+
 
         asyncio.ensure_future(self.wait_ttl(args.ttl))
 
