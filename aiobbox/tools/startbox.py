@@ -80,7 +80,10 @@ class Handler(BaseHandler):
 
         # start cluster client
         await get_cluster().start()
-        src, handler = await bbox_server.start_server(args)
+        src, handler = await bbox_server.start_server(
+            args, port=args.port,
+            bind_ip=args.bind_ip,
+            extbind=args.extbind)
         self.mod_handlers = mod_handlers
         for h in mod_handlers:
             await h.start(args)

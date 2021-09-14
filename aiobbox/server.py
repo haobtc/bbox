@@ -220,7 +220,7 @@ async def handle_metrics(request):
         lines.append('{} {} {}'.format(name, d, v))
     return web.Response(text='\n'.join(lines))
 
-async def start_server(args):
+async def start_server(args, **box_args):
     boxid = args.boxid
 
     ssl_context = get_ssl_context(args.ssl)
@@ -229,11 +229,7 @@ async def start_server(args):
     srv_names = list(srv_dict.keys())
     curr_box = get_box()
     curr_box.ssl_prefix = args.ssl
-    await curr_box.start(boxid, srv_names,
-                         port=args.port,
-                         bind_ip=args.bind_ip,
-                         extbind=args.extbind)
-
+    await curr_box.start(boxid, srv_names, **box_args)
     app = web.Application()
     app.router.add_post('/jsonrpc/2.0/api', handle)
     #app.router.add_route('*', '/jsonrpc/2.0/ws', handle_ws)
