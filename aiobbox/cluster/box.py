@@ -101,17 +101,17 @@ class BoxAgent:
                     'port_range',
                     default=ticket.port_range)
 
-            assert len(port_range) == 2
+            assert len(port_range) == 2, f'port_range is {port_range}'
             assert port_range[0] < port_range[1], 'invalid port range {}'.format(port_range)
 
-            port_range = range(*port_range)
+            port_choices = range(*port_range)
 
             # choose a relatively fixed port to keep serve
             digest = int(md5('{}.{}'.format(self.boxid, retry_t).encode()).hexdigest(), 16)
-            port_index = digest % len(port_range)
-            port = port_range[port_index]
-            assert port >= port_range[0], 'port {} is too small'.format(port)
-            assert port <= port_range[-1], 'port {} is too big'.format(port)
+            port_index = digest % len(port_choices)
+            port = port_choices[port_index]
+            assert port >= port_choices[0], 'port {} is too small'.format(port)
+            assert port <= port_choices[-1], 'port {} is too big'.format(port)
 
             extbind = ticket.extbind
             if not extbind:
