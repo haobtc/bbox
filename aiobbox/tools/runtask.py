@@ -97,3 +97,4 @@ def coroutine_exc_handler(loop, context):
     logger.error('coroutine exception %s context %s', exc, context)
     if exc and os.getenv('BBOX_COR_EXIT', '').lower() in ('1', 'yes', 'ok', 'true'):
         loop.stop()
+

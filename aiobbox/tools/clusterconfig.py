@@ -53,7 +53,6 @@ async def dump_config(args: Namespace) -> None:
     data = get_sharedconfig().dump_json()
     print(data)
 
-
 async def load_config(args: Namespace) -> None:
     jsonfile = args.jsonfile
     with open(jsonfile, 'r', encoding='utf-8') as f:

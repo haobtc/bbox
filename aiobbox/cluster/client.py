@@ -1,6 +1,7 @@
 from typing import Dict, Any, List, Union, Iterable, Set
 import logging
 import re
+import os
 import random
 import json
 import time
@@ -8,7 +9,7 @@ import asyncio
 import aio_etcd as etcd
 import aiohttp
 from collections import defaultdict
-from aiobbox.utils import json_to_str, localbox_ip, force_str
+from aiobbox.utils import json_to_str, localbox_ip, force_str, get_bbox_path
 from aiobbox.exceptions import RegisterFailed, ETCDError
 from .etcd_client import EtcdClient
 
@@ -127,7 +128,30 @@ class ClientAgent:
             logger.debug(
                 'key %s not found on delete', 'configs')
 
+    async def local_get_configs(self, cfg_path: str) -> None:
+        with open(cfg_path, 'r', encoding='utf-8') as f:
+            new_sections = json.load(f)
+        rem_set, add_set = get_sharedconfig().compare_sections(
+            new_sections)
+        if True:
+            for sec, key, value in rem_set:
+                print("delete", sec, key)
+                await self.del_config(sec, key)
+
+        for sec, key, value in add_set:
+            value = json.loads(value)
+            print("set", sec, key)
+            await self.set_config(sec, key, value)
+
+    def use_local_configs(self) -> bool:
+        shared_cfg_path = get_bbox_path('sharedconfig.json')
+        return not not (shared_cfg_path and os.path.exists(shared_cfg_path))
+
     async def get_configs(self, _chg:Any=None) -> None:
+        shared_cfg_path = get_bbox_path('sharedconfig.json')
+        if shared_cfg_path and os.path.exists(shared_cfg_path):
+            return await self.local_get_configs(shared_cfg_path)
+
         reg = r'/(?P<prefix>[^/]+)/configs/(?P<sec>[^/]+)/(?P<key>[^/]+)'
 
         new_conf = SharedConfig()
@@ -146,6 +170,10 @@ class ClientAgent:
             curr_conf.replace_with(new_conf)
 
     async def _watch_configs(self):
+        if self.use_local_configs():
+            logger.debug('use local configs')
+            return
+
         return await self.etcd_client.watch_changes(
             'configs', self.get_configs)
 

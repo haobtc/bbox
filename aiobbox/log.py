@@ -17,12 +17,12 @@ LOGGING = {
             'formatter': 'simple',
             'stream': sys.stdout,
         },
-        'syslog': {
-            'class': 'logging.handlers.SysLogHandler',
-            'formatter': 'simple',
-            'address':  (os.getenv('BBOX_SYSLOG_DEST', 'localhost'), 514),
-            'facility': 'user',
-        }
+        # 'syslog': {
+        #     'class': 'logging.handlers.SysLogHandler',
+        #     'formatter': 'simple',
+        #     'address':  (os.getenv('BBOX_SYSLOG_DEST', 'localhost'), 514),
+        #     'facility': 'user',
+        # }
     },
     'formatters':{
         'simple':{
@@ -44,7 +44,8 @@ def config_log() -> None:
     from aiobbox import testing
     logging_config = LOGGING.copy()
 
-    handlers = ['syslog']
+    #handlers = ['syslog']
+    handlers = []
 
     log_to_console = (
         os.getenv('BBOX_LOG_CONSOLE', '').lower()
