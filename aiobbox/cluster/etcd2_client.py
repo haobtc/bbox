@@ -92,8 +92,12 @@ class EtcdClient:
             logger.debug('etcd event index cleared')
             self._client_failed = True
             raise
+        except etcd.EtcdKeyNotFound as e:
+            logger.debug('etcd not found, %s', e)
+            self._client_failed = True
+            raise
         except etcd.EtcdException: # type: ignore
-            logger.warning('etcd exception', exc_info=True)
+            logger.warning('etcd exception %s', fn, exc_info=True)
             self._client_failed = True
             raise
 

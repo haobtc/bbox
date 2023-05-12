@@ -12,8 +12,8 @@ from aiobbox.utils import import_module
 from aiobbox.handler import BaseHandler
 
 class Handler(BaseHandler):
-    help = 'start bbox python project'
-    run_forever:bool = True
+    help: str = 'start bbox python project'
+    run_forever: bool = True
 
     def add_arguments(self, parser: ArgumentParser) -> None:
         parser.add_argument(
@@ -99,11 +99,10 @@ class Handler(BaseHandler):
         logging.info('box ttl expired, stoped')
         sys.exit(0)
 
-    def shutdown(self) -> None:
-        loop = asyncio.get_event_loop()
+    async def shutdown(self) -> None:
         for h in self.mod_handlers:
             h.shutdown()
-        loop.run_until_complete(get_box().deregister())
+        await get_box().deregister()
 
 def coroutine_exc_handler(loop, context):
     loop.default_exception_handler(context)

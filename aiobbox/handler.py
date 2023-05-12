@@ -1,4 +1,4 @@
-from typing import Dict, Any, List, Union, Iterable, Set
+from typing import Dict, Any, List, Union, Iterable, Set, Coroutine
 import logging
 from argparse import Namespace, ArgumentParser
 import asyncio
@@ -17,7 +17,7 @@ class BaseHandler:
     async def start(self, args: Namespace) -> None:
         pass
 
-    def shutdown(self) -> None:
+    def shutdown(self) -> Union[None, Coroutine[Any, Any, None]]:
         pass
 
     async def get_app(self, args: Namespace) -> Any:

@@ -53,30 +53,39 @@ def main():
         handler.add_arguments(parser)
         parser.set_defaults(handler=handler)
 
-    run(top_parser)
+    asyncio.run(_run(top_parser))
 
-def run(top_parser:ArgumentParser, input_args:Optional[List[str]]=None) -> None:
+async def _run(top_parser:ArgumentParser, input_args:Optional[List[str]]=None) -> None:
     args = top_parser.parse_args(input_args)
-    loop = asyncio.get_event_loop()
+    #loop = asyncio.get_event_loop()
+    #loop = asyncio.get_running_loop()
 
     handler = getattr(args, 'handler', None)
     if handler is None:
         top_parser.print_help()
     else:
-        loop.add_signal_handler(
-            signal.SIGTERM,
-            on_term_sig)
-
+        #loop.call_later(0, handler.run(args))
+        # loop.ensure_future(handler.run(args))
+        # asyncio.add_signal_handler(
+        #         signal.SIGTERM,
+        #         on_term_sig)
+        # loop = asyncio.get_running_loop()
+        # loop.add_signal_handler(
+        #         signal.SIGTERM, on_term_sig)
         try:
-            loop.run_until_complete(handler.run(args))
+            await handler.run(args)
             if getattr(handler, 'run_forever', False):
-                loop.run_forever()
+                while True:
+                    await asyncio.sleep(0.1)
         except KeyboardInterrupt:
-            pass
+            logger.info('keyboard interrupt')
         except RuntimeError as e:
             if 'Event loop stopped before Future completed' not in str(e):
                 raise
-        handler.shutdown()
+        finally:
+            cor = handler.shutdown()
+            if asyncio.iscoroutine(cor):
+                await cor
 
 def on_term_sig():
     raise KeyboardInterrupt()
