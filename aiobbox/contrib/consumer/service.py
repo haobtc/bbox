@@ -46,7 +46,8 @@ async def create_consumer(request, consumer, reuse):
     coptions['seed'] = ssl.RAND_bytes(256).hex()
 
     c = get_cluster()
-    await c.set_config('consumers', consumer, coptions)
+    if c.use_local_configs():
+        await c.set_config('consumers', consumer, coptions)
 
     # TODO: limit the consumer size
     return {

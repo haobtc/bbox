@@ -83,24 +83,25 @@ class ClientAgent:
             self.get_boxes)
 
     # config related
-    async def set_config(self, sec, key, value) -> None:
+    async def set_config(self, sec: str, key: str, value: Any, save: bool=True) -> None:
         assert sec and key
         assert '/' not in sec
         assert '/' not in key
 
         shared_cfg = get_sharedconfig()
-        etcd_key = f'configs/{sec}/{key}'
-        old_value = shared_cfg.get(sec, key)
-        value_json = json_to_str(value)
-        if old_value:
-            old_value_json = json_to_str(old_value)
-            await self.etcd_client.write(
-                etcd_key, value_json,
-                prevValue=old_value_json)
-        else:
-            await self.etcd_client.write(
-                etcd_key, value_json,
-                prevExist=False)
+        if save:
+            etcd_key = f'configs/{sec}/{key}'
+            old_value = shared_cfg.get(sec, key)
+            value_json = json_to_str(value)
+            if old_value:
+                old_value_json = json_to_str(old_value)
+                await self.etcd_client.write(
+                    etcd_key, value_json,
+                    prevValue=old_value_json)
+            else:
+                await self.etcd_client.write(
+                    etcd_key, value_json,
+                    prevExist=False)
         shared_cfg.set(sec, key, value)
 
     async def del_config(self, sec:str, key:str) -> None:
@@ -135,13 +136,11 @@ class ClientAgent:
             new_sections)
         if True:
             for sec, key, value in rem_set:
-                print("delete", sec, key)
                 await self.del_config(sec, key)
 
         for sec, key, value in add_set:
             value = json.loads(value)
-            print("set", sec, key)
-            await self.set_config(sec, key, value)
+            await self.set_config(sec, key, value, save=False)
 
     def use_local_configs(self) -> bool:
         shared_cfg_path = get_bbox_path('sharedconfig.json')

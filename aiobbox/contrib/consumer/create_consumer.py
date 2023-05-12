@@ -4,6 +4,7 @@ import re
 import os
 import uuid
 from aiobbox.handler import BaseHandler
+from aiobbox.utils import guess_json, json_pp
 from aiobbox.cluster import get_sharedconfig, get_cluster
 
 class Handler(BaseHandler):
@@ -35,7 +36,14 @@ class Handler(BaseHandler):
         coptions['seed'] = ssl.RAND_bytes(256).hex()
 
         c = get_cluster()
-        await c.set_config('consumers', consumer, coptions)
+        if c.use_local_configs():
+            print(json_pp({
+                'consumer': {
+                    consumer: coptions
+                }
+            }))
+        else:
+            await c.set_config('consumers', consumer, coptions)
 
         # TODO: limit the consumer size
 
