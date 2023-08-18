@@ -10,6 +10,7 @@ from dateutil.tz import tzlocal
 import aio_etcd as etcd
 from aiobbox.utils import json_to_str
 from aiobbox.exceptions import RegisterFailed, ETCDError
+from .client import get_cluster
 from .etcd_client import EtcdClient
 from .ticket import get_ticket
 from .cfg import get_sharedconfig
@@ -37,9 +38,28 @@ class BoxAgent:
         return self.etcd_client.cont
     cont = property(get_cont, set_cont)
 
+
+    async def start_static_box(self, boxid: str, static_box: dict) -> None:
+        self.boxid = boxid
+        self.srv_names = static_box['services']
+        sbind = static_box['bind']
+        host, port = sbind.split(':', 1)
+        self.bind = f'0.0.0.0:{port}'
+        self.extbind = static_box['bind']
+        self.ssl_prefix = static_box.get("ssl_prefix")
+
+        self.etcd_client.connect()
+        await self.register()
+        self.started = True
+
     async def start(self, boxid: str, srv_names: List[str], **ticket) -> None:
         assert not self.started
         assert boxid
+
+        static_box = get_cluster().static_boxes.get(boxid)
+        if static_box:
+            logger.info("box %s is defined statically, use the settings in boxes.json", boxid)
+            return await self.start_static_box(boxid, static_box)
 
         self.boxid = boxid
         self.srv_names = srv_names
@@ -123,6 +143,8 @@ class BoxAgent:
 
             key = f'boxes/{extbind}'
             value = self.box_info(extbind=extbind)
+            if not self.etcd_client.is_connected():
+                raise RegisterFailed('no etcd server connected')
             try:
                 await self.etcd_client.write_n_keep(key, value, BOX_TTL)
                 self.extbind = extbind

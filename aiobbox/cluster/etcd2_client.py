@@ -33,6 +33,10 @@ class EtcdClient:
     def ready(self) -> bool:
         return not not self._client
 
+    def is_connected(self) -> bool:
+        #return self._client is not None
+        return self._client is not None and not self._client_failed
+    
     def connect(self) -> None:
         self._client = None
         self._client_failed = False
@@ -44,7 +48,9 @@ class EtcdClient:
             protocol = etcd_list['protocol']
             etcd_list = etcd_list['host']
 
-        if len(etcd_list) == 1:
+        if len(etcd_list) == 0:
+            self._client = None
+        elif len(etcd_list) == 1:
             host, port = etcd_list[0].split(':')
             self._client = etcd.Client(
                 host=host,
@@ -142,6 +148,8 @@ class EtcdClient:
                 yield v
         except etcd.EtcdKeyNotFound:
             pass
+        except TypeError:
+            logger.warning('read components not available')
 
     async def watch_changes(self, component:str, changed:Callable) -> None:
         #last_index = self.etcdIndex + 1

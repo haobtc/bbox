@@ -12,7 +12,7 @@ from aiobbox.handler import BaseHandler
 async def get_config(args: Namespace) -> None:
     sec_key = args.sec_key
     if '/' in sec_key:
-        sec, key = sec_key.split('/')
+        sec, key = sec_key.split('/', 1)
         r = get_sharedconfig().get_strict(sec, key)
     else:
         r = get_sharedconfig().get_section_strict(sec_key)
@@ -23,7 +23,7 @@ async def watch_config(args: Namespace) -> None:
     while get_cluster().is_running():
         sec_key = args.sec_key
         if '/' in sec_key:
-            sec, key = sec_key.split('/')
+            sec, key = sec_key.split('/', 1)
             r = get_sharedconfig().get_strict(sec, key)
         else:
             r = get_sharedconfig().get_section_strict(sec_key)
@@ -41,7 +41,7 @@ async def set_config(args: Namespace) -> None:
 async def del_config(args: Namespace) -> None:
     sec_key = args.sec_key
     if '/' in sec_key:
-        sec, key = sec_key.split('/')
+        sec, key = sec_key.split('/', 1)
         return await get_cluster().del_config(sec, key)
     else:
         return await get_cluster().del_section(sec_key)

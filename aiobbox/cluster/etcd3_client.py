@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class EtcdClient:
     cont: bool = False
-    _client: Client
+    _client: Optional[Client]
 
     def _path(self, p:str) -> str:
         ticket = get_ticket()
@@ -26,8 +26,11 @@ class EtcdClient:
     def ready(self) -> bool:
         return not not self._client
 
+    def is_connected(self) -> bool:
+        return self._client is not None and self.cont
+
     def connect(self) -> None:
-        #self._client = None
+        self._client = None
         self.cont = True
 
         protocol = 'http'
@@ -35,6 +38,9 @@ class EtcdClient:
         if isinstance(etcd_list, dict):
             protocol = etcd_list['protocol']
             etcd_list = etcd_list['host']
+
+        if not etcd_list:
+            return
 
         etcd_addr = '{}://{}'.format(protocol, etcd_list[0])
         self._client = Client(etcd_addr)

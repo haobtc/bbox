@@ -5,6 +5,8 @@ import os
 import random
 import json
 import time
+from datetime import datetime
+from dateutil.tz import tzlocal
 import asyncio
 import aio_etcd as etcd
 import aiohttp
@@ -20,15 +22,22 @@ logger = logging.getLogger('bbox')
 class ClientAgent:
     state: str = 'INIT'
     etcd_client: EtcdClient
+    route: Dict[str, List[str]]
+    boxes: Dict[str, Any]
+    static_boxes: Dict[str, Any]
 
     def __init__(self) -> None:
         super(ClientAgent, self).__init__()
         self.state = 'INIT'
         self.etcd_client = EtcdClient()
+        self.route = defaultdict(list)
+        self.boxes = {}
+        self.static_boxes = {}
 
     async def start(self) -> None:
-        self.route: Dict[str, List[str]] = defaultdict(list)
-        self.boxes: Dict[str, Any] = {}
+        self.route = defaultdict(list)
+        self.boxes = {}
+        self.load_static_boxes()
 
         self.etcd_client.connect()
 
@@ -55,20 +64,34 @@ class ClientAgent:
                 yield bind
 
     async def get_boxes(self, _chg:Any=None):
+        "Get boxes from etcd"
         new_route: Dict[str, List[str]] = defaultdict(list)
         boxes = {}
-        async for v in self.etcd_client.read_components('boxes'):
-            m = re.match(r'/[^/]+/boxes/(?P<box>[^/]+)$', force_str(v.key))
-            if not m:
-                continue
-            if not v.value:
-                #logger.warn('v has no value %s', v)
-                continue
-            box_info = json.loads(v.value)
-            bind = box_info['bind']
-            boxes[bind] = box_info
-            for srv in box_info['services']:
-                new_route[srv].append(bind)
+        for boxid, sbox in self.static_boxes.items():
+            box_bind = sbox['bind']
+            for srv in sbox['services']:
+                new_route[srv].append(box_bind)
+
+            boxes[box_bind] = {
+                'bind': box_bind,
+                'start_time': datetime.now(tzlocal()).replace(microsecond=0).isoformat(),
+                'ssl': sbox.get('ssl_prefix'),
+                'boxid': boxid,
+                'services': sbox['services'],
+            }
+
+        if self.etcd_client.is_connected():
+            async for v in self.etcd_client.read_components('boxes'):
+                m = re.match(r'/[^/]+/boxes/(?P<box>[^/]+)$', force_str(v.key))
+                if not m:
+                    continue
+                if not v.value:
+                    continue
+                box_info = json.loads(v.value)
+                bind = box_info['bind']
+                boxes[bind] = box_info
+                for srv in box_info['services']:
+                    new_route[srv].append(bind)
 
         self.route = new_route
         self.boxes = boxes
@@ -78,9 +101,23 @@ class ClientAgent:
         return random.choice(boxes)
 
     async def _watch_boxes(self):
+        if not self.etcd_client.is_connected():
+            return
         return await self.etcd_client.watch_changes(
             'boxes',
             self.get_boxes)
+
+    # static box routes
+    def load_static_boxes(self):
+        static_boxes_path = get_bbox_path("boxes.json")
+        if static_boxes_path and os.path.exists(static_boxes_path):
+            with open(static_boxes_path) as f:
+                boxes_data = json.load(f)
+                assert isinstance(boxes_data, dict)
+                #for boxid, boxinfo in boxes_data.items():
+                self.static_boxes = boxes_data
+        else:
+            self.static_boxes = {}
 
     # config related
     async def set_config(self, sec: str, key: str, value: Any, save: bool=True) -> None:
@@ -150,9 +187,11 @@ class ClientAgent:
         shared_cfg_path = get_bbox_path('sharedconfig.json')
         if shared_cfg_path and os.path.exists(shared_cfg_path):
             return await self.local_get_configs(shared_cfg_path)
+        
 
+        if not self.etcd_client.is_connected():
+            return
         reg = r'/(?P<prefix>[^/]+)/configs/(?P<sec>[^/]+)/(?P<key>[^/]+)'
-
         new_conf = SharedConfig()
         async for v in self.etcd_client.read_components('configs'):
             m = re.match(reg, force_str(v.key))
@@ -172,7 +211,8 @@ class ClientAgent:
         if self.use_local_configs():
             logger.debug('use local configs')
             return
-
+        if not self.etcd_client.is_connected():
+            return
         return await self.etcd_client.watch_changes(
             'configs', self.get_configs)
 
