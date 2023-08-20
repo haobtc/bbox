@@ -132,7 +132,7 @@ class BoxAgent:
             port = port_choices[port_index]
             assert port >= port_choices[0], 'port {} is too small'.format(port)
             assert port <= port_choices[-1], 'port {} is too big'.format(port)
-
+            logger.debug('boxid %s, selected port %s at retry %s', self.boxid, port, retry_t)
             extbind = ticket.extbind
             if not extbind:
                 # combine external bind info
@@ -154,7 +154,7 @@ class BoxAgent:
                 await asyncio.sleep(0.1)
             except etcd.EtcdAlreadyExist:
                 logger.warn(
-                    'register key conflict {}'.format(key))
+                    f'register key conflict {key}, retry at {retry_t}')
                 await asyncio.sleep(0.1)
 
         raise RegisterFailed(

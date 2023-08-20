@@ -8,7 +8,6 @@ import time
 from datetime import datetime
 from dateutil.tz import tzlocal
 import asyncio
-import aio_etcd as etcd
 import aiohttp
 from collections import defaultdict
 from aiobbox.utils import json_to_str, localbox_ip, force_str, get_bbox_path

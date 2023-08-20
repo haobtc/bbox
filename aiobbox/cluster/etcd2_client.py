@@ -34,8 +34,8 @@ class EtcdClient:
         return not not self._client
 
     def is_connected(self) -> bool:
-        #return self._client is not None
-        return self._client is not None and not self._client_failed
+        return self._client is not None
+        #return self._client is not None and not self._client_failed
     
     def connect(self) -> None:
         self._client = None
