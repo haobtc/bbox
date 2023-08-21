@@ -2,7 +2,7 @@ from distutils.core import setup
 from setuptools import find_packages
 
 setup(name='aiobbox',
-      version='0.8.0',
+      version='0.8.1',
       description='multi-lang, highly available rpc framework',
       author='Zeng Ke',
       author_email='zk@bixin.com',
@@ -32,5 +32,5 @@ setup(name='aiobbox',
           'etcd3-py',
           'sentry-sdk >= 1.3.1',
       ],
-      python_requires='>=3.7',
+      python_requires='>=3.8',
 )
