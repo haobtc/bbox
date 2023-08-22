@@ -116,7 +116,7 @@ def get_bbox_path(path:str) -> Optional[str]:
             return p
     return None
 
-def get_ssl_context(ssl_prefix:str) -> Optional[ssl.SSLContext]:
+def get_ssl_context(ssl_prefix:str, client_side:bool=False) -> Optional[ssl.SSLContext]:
     if ssl_prefix:
         ssl_cert = get_bbox_path(
             'certs/{}/{}.crt'.format(ssl_prefix, ssl_prefix))
@@ -126,7 +126,7 @@ def get_ssl_context(ssl_prefix:str) -> Optional[ssl.SSLContext]:
             'certs/{}/{}.key'.format(ssl_prefix, ssl_prefix))
         assert ssl_key
         ssl_context = ssl.create_default_context(
-            purpose=ssl.Purpose.CLIENT_AUTH)
+            purpose=ssl.Purpose.SERVER_AUTH if client_side else ssl.Purpose.CLIENT_AUTH)
         #ssl_context.verify_mode = ssl.CERT_REQUIRED
         ssl_context.load_cert_chain(
             ssl_cert, ssl_key)
@@ -134,13 +134,13 @@ def get_ssl_context(ssl_prefix:str) -> Optional[ssl.SSLContext]:
     else:
         return None
 
-def get_cert_ssl_context(ssl_prefix: str) -> Optional[ssl.SSLContext]:
+def get_cert_ssl_context(ssl_prefix: str, client_side:bool=False) -> Optional[ssl.SSLContext]:
     if ssl_prefix:
         ssl_cert = get_bbox_path(
             'certs/{}/{}.crt'.format(ssl_prefix, ssl_prefix))
         assert ssl_cert
         ssl_context = ssl.create_default_context(
-            purpose=ssl.Purpose.CLIENT_AUTH,
+            purpose=client_side ssl.Purpose.SERVER_AUTH if client_side else ssl.Purpose.CLIENT_AUTH,            
             cafile=ssl_cert)
         return ssl_context
     else:
