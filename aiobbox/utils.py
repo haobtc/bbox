@@ -140,7 +140,7 @@ def get_cert_ssl_context(ssl_prefix: str, client_side:bool=False) -> Optional[ss
             'certs/{}/{}.crt'.format(ssl_prefix, ssl_prefix))
         assert ssl_cert
         ssl_context = ssl.create_default_context(
-            purpose=client_side ssl.Purpose.SERVER_AUTH if client_side else ssl.Purpose.CLIENT_AUTH,            
+            purpose=ssl.Purpose.SERVER_AUTH if client_side else ssl.Purpose.CLIENT_AUTH,            
             cafile=ssl_cert)
         return ssl_context
     else:
