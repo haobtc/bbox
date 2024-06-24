@@ -183,19 +183,22 @@ def supervised_run(cor: Callable, args:Tuple=(), kwargs:Optional[Dict[str, Any]]
         kwargs = {}
 
     async def __wrapperco() -> None:
-        while get_cluster().is_running():
-            try:
-                assert isinstance(kwargs, dict)
-                await cor(*args, **kwargs)
-            except Exception as e:
-                if exc and isinstance(e, exc):
-                    logging.warn('except on supervised_run, will restart', exc_info=True)
-                else:
-                    logging.error('unexpected exception on supervised_run', exc_info=True)
-                    #raise
-                    loop = asyncio.get_event_loop()
-                    loop.stop()
+        try:
+            while get_cluster().is_running():
+                try:
+                    assert isinstance(kwargs, dict)
+                    await cor(*args, **kwargs)
+                except Exception as e:
+                    if exc and isinstance(e, exc):
+                        logging.warn('except on supervised_run, will restart', exc_info=True)
+                    else:
+                        logging.error('unexpected exception on supervised_run', exc_info=True)
+                        #raise
+                        loop = asyncio.get_event_loop()
+                        loop.stop()
 
-            if get_cluster().is_running():
-                await sleep(restart_sleep)
+                if get_cluster().is_running():
+                    await sleep(restart_sleep)
+        finally:
+            logging.info('supervised run stops, %s', cor)
     asyncio.ensure_future(__wrapperco())
