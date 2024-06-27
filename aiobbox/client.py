@@ -17,7 +17,7 @@ from aiobbox.server import has_service, ServiceRequest
 
 logger = logging.getLogger('bbox')
 
-DEFAULT_TIMEOUT_SECS = 10
+DEFAULT_TIMEOUT_SECS = 30
 
 class HttpClient:
     session: Optional[aiohttp.ClientSession]
